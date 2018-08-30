@@ -1,0 +1,62 @@
+#define BASE_BITS 8
+#define BASE (1 << BASE_BITS)
+#define MASK (BASE-1)
+#define DIGITS(v, shift) (((v) >> shift) & MASK)
+
+void Seq_lsd_radix_sort_(int32_t n, uint8_t *data, uint32_t *Indexes, int32_t inf, int32_t sup) {
+//Este codigo debe limpiarse una vez que se decida si se ejecutara en paralelo o puramente secuencial
+
+    uint64_t *buffer = (uint64_t *) malloc(n*sizeof(uint64_t));
+    if (buffer  == NULL) {
+   /* Error al intentar reservar memoria */
+      printf("error buffer\n");
+    }
+    int total_digits = sizeof(uint32_t)*8;
+    int32_t i;
+    int shift, cur_t;
+    for(shift = 0; shift < total_digits; shift+=BASE_BITS) { 
+        int64_t bucket[BASE] = {0};
+        int64_t local_bucket[BASE] = {0}; // size needed in each bucket
+        //1st pass, scan whole and check the count
+             for(i = inf; i <= sup; i++){
+                local_bucket[DIGITS(data[i], shift)]++;
+             }
+             for(i = 0; i < BASE; i++) {
+                bucket[i] += local_bucket[i];
+             }
+             for (i = 1; i < BASE; i++) {
+                bucket[i] += bucket[i - 1];
+             }
+            int nthreads = 1 ;
+            int tid = 0;  
+            for(cur_t = nthreads - 1; cur_t >= 0; cur_t--) {
+                if(cur_t == tid) {
+                    for(i = 0; i < BASE; i++) {
+                        bucket[i] -= local_bucket[i];
+                        local_bucket[i] = bucket[i];
+                    }
+                } //EndIf
+            }//End for cur_t
+
+            for(i = inf; i <= sup; i++) { //Final partial sorting
+                buffer[local_bucket[DIGITS(data[i], shift)]++] = Indexes[i];
+            }
+        //now move data
+        //unsigned* tmp = data;//Indexes
+   uint32_t* tmp = Indexes;
+        ///*Indexes*/data = buffer;
+   int32_t h=0;
+   for(i=inf;i<=sup;i++){
+      Indexes[i] = buffer[h]; //Indexes = buffer; //memcpy //estos dos ciclos for en la version paralela deben desaparecer//
+      h++;
+   }
+   h=0;
+   for(i=inf;i<=sup;i++){
+      buffer[h] = tmp[i];//buffer = tmp;/*OJO ACA*/
+      h++;
+   }
+    } //EndFor shift
+    if(buffer){
+       free(buffer);
+    }
+} //end_Seq
