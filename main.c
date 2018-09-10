@@ -108,18 +108,8 @@ void DeConstructOptimizedMap8(uint8_t *MAPA , uint8_t  *MAPAO, int lRef, int Len
 
 //**********************************Coding (Compression) ( Inst --> binary coding )
 
-uint8_t TrdBitInst(int counter, uint8_t  rest, uint8_t  *Oper, uint8_t  *BaseRead, uint8_t BaseRef,
-		uint16_t *offset, uint16_t lendesc , char strand, int *aux_i);
-uint8_t BitsOperR(uint8_t *oper, uint8_t *baseRead, uint16_t *offset, uint16_t lendesc , int *ii);
-uint8_t BitsOperF(uint8_t *oper, uint8_t *baseRead, uint16_t *offset, int *ii );
-uint8_t BitsBase(uint8_t BRead, uint8_t BRef);
 uint8_t BaseIndex(char Base);
-uint8_t Offset( uint16_t offset, uint8_t *rest);
-uint8_t Preambulo(uint8_t moreFrags, char strand, uint16_t lendesc , uint16_t EdDis);
 uint8_t CreateMask8B(uint8_t pos, uint8_t Long);
-
-void Inst2Bin(uint8_t *BinInst,  uint32_t *posBInst, char strand, uint8_t MoreFrags, uint16_t lendesc, uint16_t *Offsets,
-		uint8_t *Oper, uint8_t *BaseRead, uint8_t *BaseRef, FILE *outB, FILE *outb2c, FILE *bin, long i, uint16_t EdDis);
 
 //**********************************Decoding - Decompression (Binary --> Inst)
 int CountDelBases(uint16_t Oper);
@@ -155,7 +145,6 @@ void optimizeMap8(uint8_t *MAPA , uint8_t  *MAPAO, int lRef, int *LenOpMap);
 
 //**********************************File manipulation
 void PrintBinary2(unsigned int num, int nbits);
-void PrintByte2File(FILE *outB, uint8_t num, int nbits);
 
 
 int main (){
@@ -2168,12 +2157,7 @@ void PrintBinary2(unsigned int num, int nbits){
         else printf("0");
 }
 //this prints a byte to a file
-void PrintByte2File(FILE *outB, uint8_t num, int nbits){
-	for( int i = nbits-1 ; i>=0 ; --i )
-	    if( num & (1 << i) ) fprintf(outB,"%c", '1');
-	        else fprintf(outB,"%c", '0');
-	 fprintf(outB,"\t");
-};
+
 
 /*******************************************************************************************************************************/
 /******************************************************Compression ( Instr to Binary  )*****************************************/
@@ -2194,293 +2178,7 @@ uint8_t CreateMask8B(uint8_t pos_, uint8_t Long){
    return (aux);
 }
 
-//OJO Inicializar posBInst++;, se invoca este modulo para cada olg, es decir Instuccion
-//if el read no es unmapped, y si tengo espacio suficiente een la estructura BinInst (Cuanto? espacio)
 
-//This converts an instruction to binary code [Prelude] ([Offset]|Operation)
-//Input: recibe toda la informacion de un mismo read y genera la correspondiente codificacion binaria
-//Output: PLEASE BE CAREFUL ABOUT THE  DIRECTION used to return the Forward instructions, (RIght to left)or (LtoR (the opposite))
-void Inst2Bin(uint8_t *BinInst,  uint32_t *posBInst, char strand, uint8_t MoreFrags, uint16_t lendesc, uint16_t *Offsets,
-		uint8_t *Oper, uint8_t *BaseRead, uint8_t *BaseRef, FILE *outB, FILE *outb2c, FILE *bin, long i, uint16_t EdDis){
-	
-	uint32_t auxPosInst=*posBInst ;
-	uint8_t rest=0x0, aux=0, MoreErr=1;
-	int aux_i;
-
-	struct rec my_record;//AUX for storing binary files
-
-	auxPosInst++;
-	BinInst[auxPosInst]=Preambulo(MoreFrags, strand , lendesc, EdDis);
-
-
-	/*  //To verify correctness of the byte string for the preamble
-	FILE *PAmbFile=fopen("PreambFile.txt", "a");
-	fprintf(PAmbFile,"Readnumber %ld , posBInst %ld , byte %u ,  MORE FRAGS %i STRAND %c lendesc %i\n\n",i, auxPosInst,BinInst[auxPosInst],MoreFrags, strand , lendesc);
-	if (PAmbFile) fclose(PAmbFile);
-	 */
-
-	PrintByte2File(outB, BinInst[auxPosInst], 8); //Print to a Bytes File (as a string of '0' and '1' )
-	if (DEBUG) fprintf(outb2c,"%u ",BinInst[auxPosInst]);	  //Print to Unsigned Int File
-
-	//char buffer;                                //Trying to print the binary value as a simple ASCII caracter, many ways tried, they did not work
-	//itoa(BinInst[auxPosInst],&buffer,10); 	  //printf("%c", buffer);
-
-	my_record.x=BinInst[auxPosInst];				//used to build the binary file
-	if (DEBUG) fwrite(&my_record, sizeof(struct rec), 1, bin); //Print to bin FIle
-
-	//If this is not a perfect matching
-	//NOTA IMPORTANTE, EN REALIDAD AQUI SOLO VAN r o f en MINUSCULAS, pero por fase de PRUEBAS se colocara en mayusculas in order to satisfy the condition by the moment
-    if ( ((lendesc>0)&&((strand=='r')||(strand=='e'))) || ((lendesc>1)&&((strand=='f')||(strand=='c'))) ){ //Si hay errores
-		if ((strand=='r')||(strand=='e')){
-
-			for (uint8_t  u=0;u<lendesc; u++){ 			//Converting each separated error of the read
-				if ((Oper[u]!='_')&&(BaseRead[u]>=0)&&(BaseRead[u]<=4)){
-					auxPosInst++;
-
-					BinInst[auxPosInst]= Offset(Offsets[u], &rest);
-					PrintByte2File(outB, BinInst[auxPosInst], 8);
-					if (DEBUG) fprintf(outb2c,"%u ",BinInst[auxPosInst]);     //unsigned int file
-					my_record.x=BinInst[auxPosInst];//for input and outputtests
-					if (DEBUG) fwrite(&my_record, sizeof(struct rec), 1, bin);//binary file
-out
-					auxPosInst++;
-	//if (((BaseRead[u]=='n')||(BaseRead[u]=='N'))&&(Oper[u]!='i')) printf ("****AAAAA     Ins en N ****");
-					BinInst[auxPosInst]= TrdBitInst(u, rest, Oper, BaseRead, BaseRef[u], Offsets, lendesc, strand, &aux_i);
-					PrintByte2File(outB, BinInst[auxPosInst], 8);
-					if (DEBUG) fprintf(outb2c,"%u ",BinInst[auxPosInst]);
-					my_record.x=BinInst[auxPosInst];
-					if (DEBUG) fwrite(&my_record, sizeof(struct rec), 1, bin);//binary file
-
-					u=aux_i;
-				}//endif Oper
-			}//endfo
-		}else{  //Forward cases
-			/*(in the Forward cases , the instructions must be processed from)
-			 * Se evalúa el descriptor de izq a derecha se ignora el ultimo entero  entero (el de mas a la derecha).
-			 *Se parean los números con el carácter de la derecha. La ultima instrucción de la ED se ejecuta de primera (de izq a der) sobre la ref.
-			 * */
-
-/***********///cuidar operaciones contiguas, salto de la referencia y de todo en operaciones de contiguidad, valor de mor errors por el sentido
-				//Intentar guardarlas exactamente como se generan pero al contrario . podria ser con lendesc-1
-			for (int  u=lendesc-1;u>=0; u--){ 		//Conversion de cada uno de los erroes (***lendesc o lendes-1)
-				//SALTAR la base de la ref cuando aplica la contigua
-//NO CHANGES YET
-				if ((Oper[u]!='_')&&(BaseRead[u]>=0)&&(BaseRead[u]<=4)){
-					auxPosInst++; //El i+1 solo se aplica en los casos de OFFSETS OK
-
-					BinInst[auxPosInst]= Offset(Offsets[u+1], &rest); //[aqui se rueda el desplazamiento al elemento de la DERECHA por eso empiezo al reves]
-					/*fprintf(outB,"B2f ");*/PrintByte2File(outB, BinInst[auxPosInst], 8);
-					if (DEBUG) fprintf(outb2c,"%u ",BinInst[auxPosInst]);
-					my_record.x=BinInst[auxPosInst];
-					if (DEBUG) fwrite(&my_record, sizeof(struct rec), 1, bin);//bin only file
-
-					auxPosInst++;
-					//printf ("CALCULADO BYTE 2 F PosVec %i \n",auxPosInst);fflush(stdout);
-					//if ((BaseRead[u]==BaseRef[u])&&(BaseRead[u]!='-')) printf ("***Read %ld F BASE ERROR %i ***\n", i, u+1);
-					//fprintf(outB,"\n Oper %c BRead %u BRef %u lendesc %u VarI %i \n",Oper[u], BaseRead[u],BaseRef[u], lendesc,u);
-/*ojo lendesc-1*/	BinInst[auxPosInst]= TrdBitInst(u, rest, Oper, BaseRead, BaseRef[u], Offsets, lendesc, strand,&aux_i);
-					/*fprintf(outB,"B3f ");*/PrintByte2File(outB, BinInst[auxPosInst], 8);
-					if (DEBUG) fprintf(outb2c,"%u ",BinInst[auxPosInst]);
-					my_record.x=BinInst[auxPosInst];
-					if (DEBUG) fwrite(&my_record, sizeof(struct rec), 1, bin);//bin only file
-
-					u=aux_i;
-					//printf ("CALCULADO BYTE 3 F Posvec %i  valor de u %i\n",auxPosInst, u);fflush(stdout);
-				}//endif
-			}//endfor
-
-
-		}//ende_else
-    }//endIF
-	*posBInst=auxPosInst;
-	fprintf(outB,"\n \n");
-};//EndInst2Bin
-
-//2 MSB (aka Most significant bit ): Offset's 2 MSB bits when this is >=256
-//3er bit mas significativo: Bit del MoreError
-//4to, 5to y 6to bit mas significativo: OPER
-//2 bits menos significativos: Base
-uint8_t TrdBitInst( int i, uint8_t  rest, uint8_t  *Oper, uint8_t  *BaseRead, uint8_t BaseRef,
-		uint16_t *offset, uint16_t lendesc , char strand, int *aux_i){
-	uint8_t mask=0x01, aux=0x0, mask2=0x0;
-	int ii=i;
-	aux=aux|rest;						  ////CalcularOffset,Adiciono los 2 ultimos bits del Resto anterior
-    aux=aux<<1;
-
-  //  printf("ii %i i %i auxi %i\n",ii, i, *aux_i);
-
-    if ((strand=='R')||(strand=='e')) mask2=BitsOperR(Oper, BaseRead, offset, lendesc, &i); /*Returns the oper and the Redbase binary values*/
-    if ((strand=='F')||(strand=='c')) mask2=BitsOperF(Oper, BaseRead, offset,  &i);
-
-    //NOTA IMPORTANTE, EN REALIDAD AQUI SOLO VAN r o f en MINUSCULAS, pero por fase de PRUEBAS se colocaran en mayusculas
-       	//para que se satisfaga la condicion
-   	if (((strand=='R')||(strand=='e'))&&((i<lendesc-1)&&(Oper[i+1]!='_'))) aux=mask|aux;  ////Calculates MorErrors,
-   		else if (((strand=='F')||(strand=='c'))&&(i>0)) aux=mask|aux;
-
-   	//if ((strand=='R')&&(lendesc==5)) printf("AUX %u, oper %u \n", aux, mask2);
-
-   	aux=aux<<3;
-    aux=aux|mask2;
-	aux=aux<<2;
-
-	if((mask2==0x2)||(mask2==0x3)||(mask2==0x4)||(mask2==0x5)||(mask2==0x7)) {//esDelecion en la REF, o ins N
-		mask=0x00;									//The base in the read does not really matters
-	}else {
-		if ((mask2!=0x1)){ //Is a single or double subst
-			mask=BitsBase(BaseRead[ii], BaseRef);				//CAlculates the ReadBase
-		}else{ //Insertions of non N
-			//BaseRef es caracter o entero
-			/*if (BaseRead[ii]==0x00) mask=0x00;
-				else mask=BitsBase(BaseRead[ii], 0x00); //0,1,2,3*/
-			mask=BaseRead[ii];
-		}
-
-		aux=aux|mask;
-	}
-
-	//if ((strand=='R')&&(lendesc==5)) printf("BASES %u AUXDEF %u \n", mask, aux);
-
-	*aux_i=i;
-	return(aux);
-};
-
-//Evaluates the Bits of the operation in the Forward case ()
-uint8_t BitsOperF(uint8_t *oper, uint8_t *baseRead, uint16_t *offset, int *ii ){ //puede que el strand no se necesite
-	uint8_t aux=0x0, NDelC=1;
-	int i=*ii;
-	//OPER Y CHAR O SON ENTEROS ? pero se espera que su representacion numerica sea equivalente
-	switch (oper[i]){
-		case 'd': //ACTUALIZAR PARA COMPARAR CONTRA VALOR ENTERO DIRECTO
-			//Calcular deleciones contiguas (4 casos), la operacion siguiente es una d y el offset es cero., hasta 4 veces
-
-			//ojo con diferencias del STRAND
-			while (((i-1)>=0)&&(offset[i]==0)&&(oper[i-1]=='d')&&(NDelC<=4)){
-				NDelC++; 				i--;
-			}
-			if (NDelC==5) {NDelC--;i++;}
-			/*while ((i<lendesc-1)&&(offset[i+1]==0)&&(oper[i+1]=='d')&&(NDelC<=4)){ //adaptation from te od one
-				NDelC++; 				i++;
-			}*/ //QUIT 1403014
-
-			switch(NDelC){
-				case 1:aux=0x2;break;//aux=CreateMask8B(2,1);  // Delecion Simple 0x010;
-				case 2:aux=0x3;break;//aux=CreateMask8B(2,2); //0x011
-				case 3:aux=0x4;break;//CreateMask8B(3,1); //0x100
-				case 4:aux=0x5;break;//CreateMask8B(3,1)|CreateMask8B(1,1);  //Delecion Cuadruple Consecutiva //aux=0x101
-			}
-		break;
-		case 'i':
-
-			//ojo con diferencias del STRAND
-			if((0x4==baseRead[i])||('n'==baseRead[i])){//Calcular inserciones en N
-				//Si la operacion siguiente es una i y el offset es cero y la base del READ es la misma
-				aux=0x7;
-			}else{ //Insercion Simple
-				aux=0x1;
-			}
-			break;
-		case 's':
-		//ojo con diferencias del STRAND
-			if(((i-1)>=0)&&(offset[i]==0)&&(oper[i-1]=='s')&&(baseRead[i-1]==baseRead[i])){//Sustituciones contiguas, si operacion siguiente es s y el offset es cero y la base del READ es la misma
-				//lendesc empieza en uno o a cero ?
-/*OJO*/				aux=0x6;//CreateMask8B(3,2);//=0x110
-				//SALTAR el numero de la operacion revisada//i=i+1;
-			i--;
-			}else{ //Sustitucion Simple
-				aux=0x0;//Innecesario
-			}
-		break;
-	}//Endwitch
-	*ii=i;
-	return (aux);
-
-};//EndBitsOper
-
-
-uint8_t BitsOperR(uint8_t *oper, uint8_t *baseRead, uint16_t *offset, uint16_t lendesc , int *ii ){ //puede que el strand no se necesite
-	uint8_t aux=0x0, NDelC=1, i=*ii;
-	//OPER Y CHAR O SON ENTEROS ? pero se espera que su representacion numerica sea equivalente
-	switch (oper[i]){
-		case 'd': //ACTUALIZAR PARA COMPARAR CONTRA VALOR ENTERO DIRECTO
-			//Calcular deleciones contiguas (4 casos), la operacion siguiente es una d y el offset es cero., hasta 4 veces
-
-			//ojo con diferencias del STRAND
-			while ((i<lendesc-1)&&(offset[i+1]==0)&&(oper[i+1]=='d')&&(NDelC<=4)){
-				NDelC++; 				i++;
-			}
-			if (NDelC==5) {NDelC--;i--;}
-			switch(NDelC){
-				case 1:aux=0x2; break; // Delecion Simple 0x010; CreateMask8B(2,1)
-				case 2:aux=0x3; break;//0x011 CreateMask8B(2,2)
-				case 3:aux=0x4; break;//0x100 CreateMask8B(3,1)
-				case 4:aux=0x5; break; //Delecion Cuadruple Consecutiva //101 CreateMask8B(3,1)|CreateMask8B(1,1)
-			}
-		break;
-		case 'i':
-			//printf ("*******oper[i] %c baseRead[i] %c ",oper[i], baseRead[i]);//OJO NUMERO NO LETRA
-			//ojo con diferencias del STRAND
-			if((0x4==baseRead[i])/*||(110==baseRead[i])*/){//Calcular inserciones en N
-				aux=0x7;
-				//i++; ya no por ser ins simple
-			}else{ //Insercion Simple
-				aux=0x1 ; //0x001;
-
-			}
-		break;
-		case 's':
-		//ojo con diferencias del STRAND
-			if((i<lendesc-1)&&(offset[i+1]==0)&&(oper[i+1]=='s')&&(baseRead[i]==baseRead[i+1])){//Sustituciones contiguas, si operacion siguiente es s y el offset es cero y la base del READ es la misma
-				//lendesc empieza en uno o a cero ?
-/*OJO*/				aux=0x6;//110;CreateMask8B(3,2)
-				i++;
-				//SALTAR el numero de la operacion revisada//i=i+1;
-			}else{ //Sustitucion Simple
-				aux=0x0;//Innecesario
-			}
-		break;
-	}//Endswitch
-	*ii=i;
-	return (aux);
-};//EndBitsOperR
-
-//Distancia De la BASE en la REF a la Base en el READ, devuelve un numero del 0 al 3, al cual eventualmente tocara sumarle 1
-uint8_t BitsBase(uint8_t BRead, uint8_t BRef){
-	//calcula la distancia entre la base de la referencia y la base del Read
-	//VectorCircular 0:A 1:C 2:G 3:T  4:N
-	uint8_t aux=0x0;
-	int auxInt;
-	//if ((BRead!='_')&&(BRef!='_')) auxInt=abs((BaseIndex(BRead)-BaseIndex(BRef)))%5;
-	if ((BRead!=0x9)&&(BRef!=0x9)){ //MUST BE Differente from dash '-'
-
-		if (BRead>BRef){
-			//auxInt=abs( ((int)BaseIndex(BRead)-(int)BaseIndex(BRef)) );
-			auxInt=abs((int)BRead-(int)BRef);
-		}else{
-			if (BRead==BRef) printf("Error Grave entre bases iguales Base1 %u Base2 %u \n", BRead,  BRef);
-			else{
-				auxInt=((5-(int)BRef)+(int)BRead);//%5;//No sumar el 1 sumarlo al calclular Index2Base
-				//auxInt=((5-(int)BaseIndex(BRef))+(int)BaseIndex(BRead));//%5;//No sumar el 1 sumarlo al calclular Index2Base
-				//aux=((int)BaseIndex(BRead)+(int)BaseIndex(BRef)+1)%5;//No sumar el 1 sumarlo al calclular Index2Base
-			}
-		}
-		//printf("Diferencias Ref %i   Read %i  Distancia %i \n", BRef,BRead, aux+1);
-		switch(auxInt){
-			case 0: printf("Error Grave entre bases iguales Base1 %u Base2 %u \n", BRead,  BRef);
-			break;
-			case 1: aux=0x0;  //Distancia 1
-			break;
-			case 2: aux=0x1;//CreateMask8B(1,1);  //Distancia 2 0x01
-			break;
-			case 3: aux=0x2;//CreateMask8B(2,1);  //Distancia 3 0x10
-			break;
-			case 4: aux=0x3;//CreateMask8B(2,2); //Distancia 4 0x11
-			break;
-			default: printf("Error Diferencia Grande bases Base1 %u BAse2 %u \n",  BRead,  BRef);
-		}
-	}//endif
-	//printf("Diferencias Ref %i  Read %i  Distancia %i auxInt %i\n", BRef,BRead, aux+1, auxInt);
-	return(aux);
-};
 
 uint8_t BaseIndex(char Base){   	//CAlculo del indice de la Base
 	switch(Base){
@@ -2511,67 +2209,9 @@ char Index2Base(uint8_t Index){   	//CAlculo del indice de la Base
 	}
 }
 
-/*8 bits menos significativos del offset. Los 2 bits + significativos en el 3er Entero, en las posiciones menos significativas*/
-uint8_t Offset( uint16_t offset, uint8_t *rest){
-	uint8_t mask=0x01, aux=0x0, auxRest=0x0, mod, bitCnt=0;
 
-    while (offset>0){
 
-    	if (bitCnt<8){
-    		mod=offset%2; offset=offset/2;
-	    	if (mod==1) aux=aux|mask;
-	    	mask=mask<<1;  //HAcia la izquierda porque la modificacion ocurre en la mascara y no el aux
-	    	bitCnt++;
-	    	if (bitCnt==8) mask=0x01;
-    	}else{
-    		mod=offset%2; offset=offset/2;
-    		if (mod==1) auxRest=auxRest|mask;
-    		mask=mask<<1;
-    	}
-    }//endwhile
 
-    if (offset==1) //Digito del ultimo cociente
-    	if (bitCnt>=8){
-    		auxRest=auxRest|mask;
-    	}else{
-    		aux=aux|mask;
-    	}
-
-    //construir por separado el resto para que se pueda pocesar en la siguiente instruccion
-    *rest=auxRest;
-	return(aux);
-};
-
-//¿Como resolver asunto del more frags?, traer esa info del alineador ?
-uint8_t Preambulo(uint8_t moreFrags, char strand, uint16_t  lendesc, uint16_t EdDis ){
-	uint8_t mask=0x01, aux=0x0;
-
-	//1. Considerar caso de dos preambulos perfectos contiguos. si hay espacio?,
-		//Como si solo tengo la info de un read al momento?, pero lo mismo ocurre con el mostfrags!
-	if (moreFrags==1) { //MoreFrags *RESOLVER
-		aux=mask|aux;   aux=aux<<3;
-	}
-	//printf ("lendesc %i EDis %i ///", lendesc, EdDis);
-	if ((lendesc<=1)){ //PERFECT MATCH CUIDADOOOOOOOOOOOOOOOOO
-		if (strand=='F') mask=0x0; //Forward
-		if (strand=='R') mask=0x1;   //Reverse
-		if (strand=='C') mask=0x2;   //Complement 10
-		if (strand=='E') mask=0x3;//11 CreateMask8B(2,2);//0x011;   //rEvErsE complEmEnt
-		//if (strand=='T') mask=0x011; //another Transform
-	}else{ //ERROR MATCH
-		if (strand=='F') mask=0x4;//CreateMask8B(3,1);//0x100;   //Forward
-		if (strand=='R') mask=0x5;//CreateMask8B(3,1)|CreateMask8B(1,1);//0x101;   //Reverse
-		if (strand=='C') mask=0x6;//CreateMask8B(3,2);//0x110;   //Complement
-		if (strand=='E') mask=0x7; //CreateMask8B(3,3);//0x111;   //rEvErsE complEmEnt
-		//if (strand=='T') mask=0x011; //another Transform
-	};
-    if ((lendesc==1)&&(EdDis==1)){
-			if (strand=='R') mask=0x5;//CreateMask8B(3,1)|CreateMask8B(1,1);//0x101;   //Reverse
-			if (strand=='E') mask=0x7; //CreateMask8B(3,3);//0x111;   //rEvErsE complEmEnt
-    }
-	aux=mask|aux;
-	return(aux);
-};
 /*******************************************************************************************************************************/
 /************************************************END of Compression ( Instr to Binary  )*****************************************/
 /*******************************************************************************************************************************/
