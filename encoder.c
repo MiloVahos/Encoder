@@ -7,6 +7,21 @@
  Description :	Encoder algorithm of the UdeaCompress FASTQ compressor
  ============================================================================
  */
+/*	
+ ============================================================================
+		FORMATO DEL ARCHIVO DE ALINEAMIENTO
+ ============================================================================
+    0. B
+    1. C
+    3. MapPos
+    4. lendesc
+    5. strand
+    6. 0. oper ->SE REPITEN LENDESC VECES
+       1. offset ->SE REPITEN LENDESC VECES
+       2. baseRef ->SE REPITEN LENDESC VECES
+       3. baseRead ->SE REPITEN LENDESC VECES
+
+*/
 
 // LIBRERÍAS
 #include <stdio.h>
@@ -37,31 +52,104 @@ void PrintByte2File(FILE *outB, uint8_t num, int nbits);
 
 int main() {
 
-	// VARIABLES DEL PROCESO
+	// VARIABLES DE PROCESO
 	uint32_t	TotalReads;		// CANTIDAD TOTAL DE READS = B*C
-	uint32_t	B;				// CANTIDAD BASE DE READS
-	uint8_t		C;				// COVERAGE DE LA CANTIDAD DE READS
+	uint32_t	B, auxB;			// CANTIDAD BASE DE READS
+	uint8_t		C;			// COVERAGE DE LA CANTIDAD DE READS
 	char 		*RefAlign;		// NOMBRE ARCHIVO ALIGN
 	FILE 		*ALIGN;			// PUNTEROS A LOS ARCHIVOS
+
+	// VARIABLES DE OPERACIÓN
+	uint32_t 	*MapPos;        	// Posición de Matching respecto a la referencia
+	uint16_t  	*lendesc;    		// Cantidad de errores total en el Read
+	char      	*strand;     		// Caractér con el sentido del matching
+	uint8_t   	**Oper;      		// Arreglo con la operación por error
+	uint16_t  	**Offset;   		// Arreglo de offsets por cada error
+	uint8_t   	**BaseRef;   		// Arreglo con la base de la referencia (Read Referencia)
+	uint8_t 	**BaseRead; 		// Arreglo con la base después de la mutación (Read Destino)
+	
 
 	// ALGORITMO PARA LEER LOS DATOS DE LOS ARCHIVOS
 	RefAlign	=	(char*) malloc(NAMES_SIZE*sizeof(char));
 	if (RefAlign	==	NULL) printf ("Not enough memory for RefAlign");
-	strcpy( RefAlign, "lambda_virus.align" );
+	strcpy( RefAlign, "GRCh38.align" );
 	
 	ALIGN	= 	fopen( RefAlign, "r" );
 	if( ALIGN != NULL ) {
-		printf("Document is open\n"); 		// Prueba que el documento se ha abierto
-		int state	=	0;					// Estado actual de la máquina de estados
-		while( !feof( ALIGN ) ) {			// MIENTRAS NO SE LLEGUE AL CARACTER FIN DE DOCUMENTO
-			switch( state ) {
+		fscanf( ALIGN, "%"PRIu32"",&auxB );
+		B	=	auxB;
+		fscanf( ALIGN, "%"PRIu8"",&C );
+		TotalReads	=	( B*C );
+		printf("TotalReads = %"PRIu32"\n",TotalReads);
+
+		//DECLARACIÓN DE ARREGLOS
+		MapPos        =   (uint32_t*)  malloc(TotalReads*sizeof(uint32_t));
+		if ( MapPos == NULL ) printf ("Not enough memory for MapPos");
+
+		lendesc        =   (uint16_t*)  malloc(TotalReads*sizeof(uint16_t));
+		if ( lendesc == NULL ) printf ("Not enough memory for lendesc");
+
+		strand        =   (char*)  malloc(TotalReads*sizeof(char));
+		if ( strand == NULL ) printf ("Not enough memory for strand");
+
+			// ARREGLOS DE ARREGLOS
+		Oper        =   (uint8_t**)  malloc(TotalReads*sizeof(uint8_t*));
+		if ( Oper == NULL ) printf ("Not enough memory for Oper");
+
+		Offset        =   (uint16_t**)  malloc(TotalReads*sizeof(uint16_t*));
+		if ( Offset == NULL ) printf ("Not enough memory for lendesc");
+
+		BaseRef        =   (uint8_t**)  malloc(TotalReads*sizeof(uint8_t*));
+		if ( BaseRef == NULL ) printf ("Not enough memory for BaseRef");
+
+		BaseRead        =   (uint8_t**)  malloc(TotalReads*sizeof(uint8_t*));
+		if ( BaseRead == NULL ) printf ("Not enough memory for BaseRead");
+		
+		for ( int i = 0; i < TotalReads; i++ ) {
+			fscanf( ALIGN, "%"PRIu32"", &MapPos[i] );
+			fscanf( ALIGN, "%"PRIu16"", &lendesc[i] );
+			char s;
+			fscanf( ALIGN, " %c", &s );
+			strand[i]	=	s;
+			printf( "%"PRIu32"\n", MapPos[i] );
+			printf( "%"PRIu16"\n", lendesc[i] );
+			printf( "%c\n", strand[i] );
+
+			for ( int j = 0; j < lendesc; j++ ) {
 				
+				Oper[i]        =   (uint8_t*)  malloc(lendesc[i]*sizeof(uint8_t));
+				if ( Oper[i] == NULL ) printf ("Not enough memory for Oper");
+
+				Offset[i]        =   (uint16_t*)  malloc(lendesc[i]*sizeof(uint16_t));
+				if ( Offset[i] == NULL ) printf ("Not enough memory for lendesc");
+
+				BaseRef[i]        =   (uint8_t*)  malloc(lendesc[i]*sizeof(uint8_t));
+				if ( BaseRef[i] == NULL ) printf ("Not enough memory for BaseRef");
+
+				BaseRead[i]        =   (uint8_t*)  malloc(lendesc[i]*sizeof(uint8_t));
+				if ( BaseRead[i] == NULL ) printf ("Not enough memory for BaseRead");
+
+				fscanf( ALIGN, "%"PRIu8"", &Oper[i][j] );
+				fscanf( ALIGN, "%"PRIu16"", &Offset[i][j] );
+				fscanf( ALIGN, "%"PRIu8"", &BaseRef[i][j] );
+				fscanf( ALIGN, "%"PRIu8"", &BaseRead[i][j] );
+
+				printf( "%"PRIu8"\n", Oper[i][j] );
+				printf( "%"PRIu16"\n", Offset[i][j] );
+				printf( "%"PRIu8"\n", BaseRef[i][j] );
+				printf( "%"PRIu8"\n", BaseRead[i][j] );
+
+
+						
 			}
+
 		}
+		
 	}	
 	
 
 	fclose( ALIGN );
+	
 
 	if(RefAlign)	 free(RefAlign);
     return 0;
