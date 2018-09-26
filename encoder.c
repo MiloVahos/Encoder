@@ -15,7 +15,8 @@
 #include <string.h>
 #include <inttypes.h>
 
-// DEFINES
+// DEFINE
+#define NAMES_SIZE 40	// LONGITUD DEL NOMBRE DE LOS ARCHIVOS
 
 // FUNCTIONS PROTOTYPES
 //**********************************Coding (Compression) ( Inst --> binary coding )
@@ -36,21 +37,54 @@ void PrintByte2File(FILE *outB, uint8_t num, int nbits);
 
 int main() {
 
+	// VARIABLES DEL PROCESO
+	uint32_t	TotalReads;		// CANTIDAD TOTAL DE READS = B*C
+	uint32_t	B;				// CANTIDAD BASE DE READS
+	uint8_t		C;				// COVERAGE DE LA CANTIDAD DE READS
+	char 		*RefAlign;		// NOMBRE ARCHIVO ALIGN
+	FILE 		*ALIGN;			// PUNTEROS A LOS ARCHIVOS
+
+	// ALGORITMO PARA LEER LOS DATOS DE LOS ARCHIVOS
+	RefAlign	=	(char*) malloc(NAMES_SIZE*sizeof(char));
+	if (RefAlign	==	NULL) printf ("Not enough memory for RefAlign");
+	strcpy( RefAlign, "lambda_virus.align" );
+	
+	ALIGN	= 	fopen( RefAlign, "r" );
+	if( ALIGN != NULL ) {
+		printf("Document is open\n"); 		// Prueba que el documento se ha abierto
+		int state	=	0;					// Estado actual de la máquina de estados
+		while( !feof( ALIGN ) ) {			// MIENTRAS NO SE LLEGUE AL CARACTER FIN DE DOCUMENTO
+			switch( state ) {
+				
+			}
+		}
+	}	
+	
+
+	fclose( ALIGN );
+
+	if(RefAlign)	 free(RefAlign);
     return 0;
 
 }
 
 // FUNCTIONS
 
-//OJO Inicializar posBInst++;, se invoca este modulo para cada olg, es decir Instuccion
-//if el read no es unmapped, y si tengo espacio suficiente een la estructura BinInst (Cuanto? espacio)
-
-//This converts an instruction to binary code [Prelude] ([Offset]|Operation)
-//Input: recibe toda la informacion de un mismo read y genera la correspondiente codificacion binaria
-//Output: PLEASE BE CAREFUL ABOUT THE  DIRECTION used to return the Forward instructions, (RIght to left)or (LtoR (the opposite))
+/**
+ * @param: BinInst	 -> Arreglo de salida, depende de la cantidad de reads y mutaciones
+ * @param: posBInst  -> Índice de BinInst
+ * @param: strand	 -> Sentido del matching (Forward(F), Reverse(R), Complement(C), Reverse Complement(E))
+ * @param: MoreFrags -> Bandera que indica si el siguiente read mapea en la misma posición
+ * @param: lendesc	 -> Cantidad de errores del read
+ * @param: Offsets	 -> Vector de offsets entre errores
+ * @param: Oper		 -> Vector de operaciones
+ * @param: BaseRead	 -> Vector de Bases en el Read
+ * @param: BaseRef	 -> Vector de Bases en la referencia
+ * @param: Index	 -> Posición de este read de acuerdo al nuevo ordenamiento
+*/ 
 void Inst2Bin(  uint8_t *BinInst,  uint32_t *posBInst, char strand, uint8_t MoreFrags, 
                 uint16_t lendesc, uint16_t *Offsets, uint8_t *Oper, uint8_t *BaseRead, 
-                uint8_t *BaseRef, FILE *outB, FILE *outb2c, FILE *bin, long i, uint16_t EdDis){
+                uint8_t *BaseRef, FILE *outB, FILE *outb2c, FILE *bin, long Index, uint16_t EdDis){
 	
 	uint32_t    auxPosInst =   *posBInst ;
 	uint8_t     rest    =   0x0; 
