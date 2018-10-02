@@ -54,16 +54,16 @@ int main() {
 
 	// VARIABLES DE PROCESO
 	uint32_t	TotalReads;		// CANTIDAD TOTAL DE READS = B*C
-	uint32_t	B, auxB;			// CANTIDAD BASE DE READS
-	uint8_t		C;			// COVERAGE DE LA CANTIDAD DE READS
+	uint32_t	B;				// CANTIDAD BASE DE READS
+	uint8_t		C;				// COVERAGE DE LA CANTIDAD DE READS
 	char 		*RefAlign;		// NOMBRE ARCHIVO ALIGN
 	FILE 		*ALIGN;			// PUNTEROS A LOS ARCHIVOS
 
 	// VARIABLES DE OPERACIÓN
-	uint32_t 	*MapPos;        	// Posición de Matching respecto a la referencia
-	uint16_t  	*lendesc;    		// Cantidad de errores total en el Read
-	char      	*strand;     		// Caractér con el sentido del matching
-	uint8_t   	**Oper;      		// Arreglo con la operación por error
+	uint32_t	*MapPos;        // Posición de Matching respecto a la referencia
+	uint16_t  	*lendesc;    	// Cantidad de errores total en el Read
+	char      	*strand;   		// Caractér con el sentido del matching
+	uint8_t   	**Oper;			// Arreglo con la operación por error
 	uint16_t  	**Offset;   		// Arreglo de offsets por cada error
 	uint8_t   	**BaseRef;   		// Arreglo con la base de la referencia (Read Referencia)
 	uint8_t 	**BaseRead; 		// Arreglo con la base después de la mutación (Read Destino)
@@ -76,81 +76,68 @@ int main() {
 	
 	ALIGN	= 	fopen( RefAlign, "r" );
 	if( ALIGN != NULL ) {
-		fscanf( ALIGN, "%"PRIu32"",&auxB );
-		B	=	auxB;
-		fscanf( ALIGN, "%"PRIu8"",&C );
+		fscanf( ALIGN, "%"SCNu32"",&B );
+		fscanf( ALIGN, "%"SCNu8"",&C );
 		TotalReads	=	( B*C );
-		printf("TotalReads = %"PRIu32"\n",TotalReads);
 
 		//DECLARACIÓN DE ARREGLOS
 		MapPos        =   (uint32_t*)  malloc(TotalReads*sizeof(uint32_t));
 		if ( MapPos == NULL ) printf ("Not enough memory for MapPos");
-
 		lendesc        =   (uint16_t*)  malloc(TotalReads*sizeof(uint16_t));
 		if ( lendesc == NULL ) printf ("Not enough memory for lendesc");
-
 		strand        =   (char*)  malloc(TotalReads*sizeof(char));
 		if ( strand == NULL ) printf ("Not enough memory for strand");
-
-			// ARREGLOS DE ARREGLOS
+		// ARREGLOS DE ARREGLOS
 		Oper        =   (uint8_t**)  malloc(TotalReads*sizeof(uint8_t*));
 		if ( Oper == NULL ) printf ("Not enough memory for Oper");
-
 		Offset        =   (uint16_t**)  malloc(TotalReads*sizeof(uint16_t*));
 		if ( Offset == NULL ) printf ("Not enough memory for lendesc");
-
 		BaseRef        =   (uint8_t**)  malloc(TotalReads*sizeof(uint8_t*));
 		if ( BaseRef == NULL ) printf ("Not enough memory for BaseRef");
-
 		BaseRead        =   (uint8_t**)  malloc(TotalReads*sizeof(uint8_t*));
 		if ( BaseRead == NULL ) printf ("Not enough memory for BaseRead");
+
+		printf("%"PRIu32"\n",TotalReads);
 		
 		for ( int i = 0; i < TotalReads; i++ ) {
-			fscanf( ALIGN, "%"PRIu32"", &MapPos[i] );
-			fscanf( ALIGN, "%"PRIu16"", &lendesc[i] );
-			char s;
-			fscanf( ALIGN, " %c", &s );
-			strand[i]	=	s;
-			printf( "%"PRIu32"\n", MapPos[i] );
-			printf( "%"PRIu16"\n", lendesc[i] );
-			printf( "%c\n", strand[i] );
 
-			for ( int j = 0; j < lendesc; j++ ) {
+			fscanf( ALIGN, "%"SCNu32"", &MapPos[i] );
+			fscanf( ALIGN, "%"SCNu16"", &lendesc[i] );
+			fscanf( ALIGN, " %c", &strand[i] );
+
+			//printf( "%"PRIu32"\n", MapPos[i] ); fflush(stdout);
+			//printf( "%"PRIu16"\n", lendesc[i] ); fflush(stdout);
+			//printf( "%c\n", strand[i] ); fflush(stdout);
+
+			if ( lendesc[i] != 0 ) {
+				for ( int j = 0; j < lendesc[i]; j++ ) {
+
+					Oper[i]        =   (uint8_t*)  malloc(lendesc[i]*sizeof(uint8_t));
+					if ( Oper[i] == NULL ) printf ("Not enough memory for Oper");
+					Offset[i]        =   (uint16_t*)  malloc(lendesc[i]*sizeof(uint16_t));
+					if ( Offset[i] == NULL ) printf ("Not enough memory for lendesc");
+					BaseRef[i]        =   (uint8_t*)  malloc(lendesc[i]*sizeof(uint8_t));
+					if ( BaseRef[i] == NULL ) printf ("Not enough memory for BaseRef");
+					BaseRead[i]        =   (uint8_t*)  malloc(lendesc[i]*sizeof(uint8_t));
+					if ( BaseRead[i] == NULL ) printf ("Not enough memory for BaseRead");
+
+					fscanf( ALIGN, " %c", &Oper[i][j] );
+					fscanf( ALIGN, "%"SCNu16"", &Offset[i][j] );
+					fscanf( ALIGN, " %c", &BaseRef[i][j] );
+					fscanf( ALIGN, " %c", &BaseRead[i][j] );
+
+					//printf( "%c\n", Oper[i][j] );
+					//printf( "%"PRIu16"\n", Offset[i][j] );
+					//printf( "%c\n", BaseRef[i][j] );
+					//printf( "%c\n", BaseRead[i][j] );
 				
-				Oper[i]        =   (uint8_t*)  malloc(lendesc[i]*sizeof(uint8_t));
-				if ( Oper[i] == NULL ) printf ("Not enough memory for Oper");
-
-				Offset[i]        =   (uint16_t*)  malloc(lendesc[i]*sizeof(uint16_t));
-				if ( Offset[i] == NULL ) printf ("Not enough memory for lendesc");
-
-				BaseRef[i]        =   (uint8_t*)  malloc(lendesc[i]*sizeof(uint8_t));
-				if ( BaseRef[i] == NULL ) printf ("Not enough memory for BaseRef");
-
-				BaseRead[i]        =   (uint8_t*)  malloc(lendesc[i]*sizeof(uint8_t));
-				if ( BaseRead[i] == NULL ) printf ("Not enough memory for BaseRead");
-
-				fscanf( ALIGN, "%"PRIu8"", &Oper[i][j] );
-				fscanf( ALIGN, "%"PRIu16"", &Offset[i][j] );
-				fscanf( ALIGN, "%"PRIu8"", &BaseRef[i][j] );
-				fscanf( ALIGN, "%"PRIu8"", &BaseRead[i][j] );
-
-				printf( "%"PRIu8"\n", Oper[i][j] );
-				printf( "%"PRIu16"\n", Offset[i][j] );
-				printf( "%"PRIu8"\n", BaseRef[i][j] );
-				printf( "%"PRIu8"\n", BaseRead[i][j] );
-
-
-						
+				}
 			}
-
 		}
-		
-	}	
-	
+	}
 
 	fclose( ALIGN );
 	
-
 	if(RefAlign)	 free(RefAlign);
     return 0;
 
