@@ -29,6 +29,7 @@
 #include <ctype.h>
 #include <string.h>
 #include <inttypes.h>
+#include <omp.h>
 
 // DEFINE
 #define NAMES_SIZE 40	// LONGITUD DEL NOMBRE DE LOS ARCHIVOS
@@ -55,7 +56,7 @@ uint8_t BitsBase(uint8_t BRead, uint8_t BRef);
 void PrintByte2File(FILE *outB, uint8_t num, int nbits);
 
 //**********************************SORTING
-void RadixSort (size_t TotalReads, uint32_t *MapPos, uint64_t *Indexes);
+void RadixSort(int32_t TotalReads, uint32_t *MapPos, uint64_t *Indexes, uint32_t inf, uint32_t sup);
 
 int main() {
 
@@ -105,8 +106,6 @@ int main() {
 		if ( BaseRef == NULL ) printf ("Not enough memory for BaseRef");
 		BaseRead        =   (uint8_t**)  malloc(TotalReads*sizeof(uint8_t*));
 		if ( BaseRead == NULL ) printf ("Not enough memory for BaseRead");
-
-		printf("%"PRIu32"\n",TotalReads);
 		
 		for ( int i = 0; i < TotalReads; i++ ) {
 
@@ -146,24 +145,21 @@ int main() {
 	}
 
 	// SORTING
+
 	Indexes	=   (uint64_t*)  malloc(TotalReads*sizeof(uint64_t));
 	if ( Indexes == NULL ) printf ("Not enough memory for Indexes");
 	for ( int i = 0; i < TotalReads; i++ ){
 		Indexes[i]	=	i;
 	}
-	RadixSort(TotalReads,MapPos,Indexes);
-
-	/*for ( int j = 0; j < TotalReads; j++ ) {
-		printf("%"PRIu64"\n",Indexes[j]);
-	}
-	printf("\n\n");
+	RadixSort(TotalReads,MapPos,Indexes,0,TotalReads);
 
 	for ( int j = 0; j < TotalReads; j++ ) {
 		printf("%"PRIu32"\n",MapPos[j]);
 	}
-	printf("\n");*/
-
-
+	printf("\n\n");
+	for ( int j = 0; j < TotalReads; j++ ) {
+		printf("%"PRIu64"\n",Indexes[j]);
+	}
 
 	fclose( ALIGN );
 	
@@ -312,10 +308,6 @@ uint8_t Offset( uint16_t offset, uint8_t *rest) {
 	return(aux);
 };
 
-// 2 MSB (aka Most significant bit ): Offset's 2 MSB bits when this is >=256
-// 3er bit mas significativo: Bit del MoreError
-// 4to, 5to y 6to bit mas significativo: OPER
-// 2 bits menos significativos: Base
 uint8_t TrdBitInst( int i, uint8_t  rest, uint8_t  *Oper, uint8_t  *BaseRead, 
                     uint8_t BaseRef, uint16_t *offset, uint16_t lendesc, 
                     char strand, int *aux_i) {
@@ -430,8 +422,6 @@ uint8_t BitsOperR(uint8_t *oper, uint8_t *baseRead, uint16_t *offset, uint16_t l
 	return (aux);
 };
 
-//Distancia De la BASE en la REF a la Base en el READ, devuelve un numero del 0 al 3,
-//al cual eventualmente tocara sumarle 1
 uint8_t BitsBase(uint8_t BRead, uint8_t BRef){
 	
     //calcula la distancia entre la base de la referencia y la base del Read
@@ -466,48 +456,57 @@ uint8_t BitsBase(uint8_t BRead, uint8_t BRef){
 	return(aux);
 };
 
-// RadixSort:	Ordena los datos de acuerdo con la posición de mapeo
-// 				-> void optimizedQuickSortIndex( uint32_t *Pos, int low, int high, uint32_t *Indexes)
-// #define BASE_BITS 8
-// #define BASE (1 << BASE_BITS)
-// #define MASK (BASE-1)
-// #define DIGITS(v, shift) (((v) >> shift) & MASK)
-void RadixSort ( size_t TotalReads, uint32_t *MapPos, uint64_t *Indexes ) {
 
-    uint64_t *buffer = (uint64_t*) malloc(TotalReads*sizeof(uint64_t));
+void RadixSort(int32_t TotalReads, uint32_t *MapPos, uint64_t *Indexes, uint32_t inf, uint32_t sup) {
+
+    uint64_t *buffer = (uint64_t *) malloc(TotalReads*sizeof(uint64_t));
+    if (buffer  == NULL) printf("No hay espacio suficiente para buffer\n");
+
+	uint32_t *bufferAux = (uint32_t *) malloc(TotalReads*sizeof(uint32_t));
+    if (bufferAux  == NULL) printf("No hay espacio suficiente para bufferAux\n");
+    
     int total_digits = sizeof(uint64_t)*8;
- 
-    size_t i;
-    for( int shift = 0; shift < total_digits; shift+=BASE_BITS ) {
+    int32_t i;
+    int shift, cur_t;
+    for( shift = 0;	shift < total_digits;	shift += BASE_BITS ) { 
 
-        size_t bucket[BASE_BITS] = {0};
-		for(i = 0; i < TotalReads; i++){	// HISTOGRAM
-			bucket[DIGITS(MapPos[i], shift)]++;
+        int64_t bucket[BASE] = {0};
+        int64_t local_bucket[BASE] = {0};
+        
+		for(i = inf; i < sup; i++) local_bucket[DIGITS(MapPos[i], shift)]++;
+        for(i = 0; i < BASE; i++) bucket[i] += local_bucket[i];
+        for(i = 1; i < BASE; i++) bucket[i] += bucket[i - 1];
+            
+        int nthreads = 1 ;
+        int tid = 0;  
+        for(cur_t = nthreads - 1; cur_t >= 0; cur_t--) {
+            if(cur_t == tid) {
+                for(i = 0; i < BASE; i++) {
+                    bucket[i] -= local_bucket[i];
+                    local_bucket[i] = bucket[i];
+                }
+            }
+        }
+        for(i = inf; i < sup; i++){
+			int Index = local_bucket[DIGITS(MapPos[i], shift)]++;
+			buffer[Index] = MapPos[i];
+			bufferAux[Index] = Indexes[i];	
+		} 
+
+		uint32_t* tmp = Indexes;
+		int32_t h=0;
+		for( i = inf; i < sup; i++ ){
+			MapPos[i] = buffer[h];
+			Indexes[i] = bufferAux[h]; 
+			h++;
 		}
-		for ( int j = 0; j < BASE_BITS; j++ ) {
-			printf("%lu ",bucket[j]);
+	
+		h=0;
+		for( i = inf; i < sup; i++ ){
+			buffer[h] = tmp[i];
+			h++;
 		}
-		printf("\n\n");
-		/*for (i = 1; i < BASE; i++) {		// PREFIX SUM
-			bucket[i] += bucket[i - 1];
-		}
-		int nthreads = 1 ;
-		int tid = 0;  
-		for(int cur_t = nthreads - 1; cur_t >= 0; cur_t--) {
-			if(cur_t == tid) {
-				for(i = 0; i < BASE; i++) {
-					bucket[i] -= local_bucket[i];
-					local_bucket[i] = bucket[i];
-				}
-			} //EndIf
-		}//End for cur_t
-		for(i = 0; i < TotalReads; i++) { 
-			buffer[local_bucket[DIGITS(MapPos[i], shift)]++] = Indexes[i];
-		}
-        //now move data
-        unsigned* tmp = MapPos;
-        Indexes = buffer;
-        buffer = tmp;*/
     }
-    free(buffer);
+    if(buffer) free(buffer);
 }
+
