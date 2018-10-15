@@ -32,14 +32,14 @@
 #include <omp.h>
 
 // DEFINE
-#define NAMES_SIZE 40	// LONGITUD DEL NOMBRE DE LOS ARCHIVOS
-#define BASE_BITS 8
+#define NAMES_SIZE 40				// LONGITUD DEL NOMBRE DE LOS ARCHIVOS
+#define BASE_BITS 8					// MACROS DEL RADIXSORT
 #define BASE (1 << BASE_BITS)
 #define MASK (BASE-1)
 #define DIGITS(v, shift) (((v) >> shift) & MASK)
 
 // FUNCTIONS PROTOTYPES
-//**********************************Coding (Compression) ( Inst --> binary coding )
+//**********************************Coding (Compression)(Inst --> binary coding)*********//
 void Inst2Bin(  uint8_t *BinInst, uint32_t *posBInst, char strand, uint8_t MoreFrags, 
                 uint16_t lendesc, uint16_t *Offsets, uint8_t *Oper, uint8_t *BaseRead, 
                 uint8_t *BaseRef, FILE *outB, FILE *outb2c, FILE *bin, long i, uint16_t EdDis);
@@ -49,14 +49,14 @@ uint8_t TrdBitInst( int counter, uint8_t  rest, uint8_t  *Oper, uint8_t  *BaseRe
 uint8_t BitsOperR(uint8_t *oper, uint8_t *baseRead, uint16_t *offset, uint16_t lendesc , int *ii);
 uint8_t BitsOperF(uint8_t *oper, uint8_t *baseRead, uint16_t *offset, int *ii );
 uint8_t Preambulo(uint8_t moreFrags, char strand, uint16_t lendesc , uint16_t EdDis);
-uint8_t Offset( uint16_t offset, uint8_t *rest);
+uint8_t Offset(uint16_t offset, uint8_t *rest);
 uint8_t BitsBase(uint8_t BRead, uint8_t BRef);
 
-//**********************************File manipulation
+//**********************************File manipulation************************************//
 void PrintByte2File(FILE *outB, uint8_t num, int nbits);
 
-//**********************************SORTING
-void RadixSort(int32_t TotalReads, uint32_t *MapPos, uint64_t *Indexes, uint32_t inf, uint32_t sup);
+//**********************************SORTING**********************************************//
+void RadixSort(int32_t TotalReads, uint32_t *MapPos, uint64_t *Indexes);
 
 int main() {
 
@@ -64,11 +64,12 @@ int main() {
 	uint32_t	TotalReads;		// CANTIDAD TOTAL DE READS = B*C
 	uint32_t	B;				// CANTIDAD BASE DE READS
 	uint8_t		C;				// COVERAGE DE LA CANTIDAD DE READS
-	char 		*RefAlign;		// NOMBRE ARCHIVO ALIGN
 	FILE 		*ALIGN;			// PUNTEROS A LOS ARCHIVOS
 
 	// VARIABLES DE OPERACIÓN
 	uint64_t	*Indexes;		// Índices referentes a los Reads
+	uint32_t	posBInst;		// Índice que controla BinInst
+	uint8_t		MoreFrags;		// Indica si el siguiente Read Mapea en la misma posición
 	uint32_t	*MapPos;        // Posición de Matching respecto a la referencia
 	uint16_t  	*lendesc;    	// Cantidad de errores total en el Read
 	char      	*strand;   		// Caractér con el sentido del matching
@@ -78,14 +79,12 @@ int main() {
 	uint8_t 	**BaseRead; 	// Arreglo con la base después de la mutación (Read Destino)
 
 	// VARIABLES DE SALID DEL Inst2Bin
-	uint8_t		*BinInst;			// Arreglo de salida del Inst2Bin
+	uint8_t		*BinInst;		// Arreglo de salida del Inst2Bin
 
-	// LECTURA DE LOS DATOS DE LOS ARCHIVOS
-	RefAlign	=	(char*) malloc(NAMES_SIZE*sizeof(char));
-	if (RefAlign	==	NULL) printf ("Not enough memory for RefAlign");
-	strcpy( RefAlign, "GRCh38.align" );
-	ALIGN	= 	fopen( RefAlign, "r" );
+	// 1. OBTENER LOS DATOS QUE PROVIENEN DEL ARG
+	ALIGN	= 	fopen( "GRCh38.align" , "r" );
 	if( ALIGN != NULL ) {
+
 		fscanf( ALIGN, "%"SCNu32"",&B );
 		fscanf( ALIGN, "%"SCNu8"",&C );
 		TotalReads	=	( B*C );
@@ -144,26 +143,35 @@ int main() {
 		}
 	}
 
-	// SORTING
+	// 2. USANDO EL RADIX SORT SE ORDENA EL VECTOR DE ÍNDICES DE ACUERDO CON LA POSICIÓN DE MAPEO
 
+	// 		- SE CREA EL VECTOR DE ÍNDICES [0 - TotalReads-1]
 	Indexes	=   (uint64_t*)  malloc(TotalReads*sizeof(uint64_t));
 	if ( Indexes == NULL ) printf ("Not enough memory for Indexes");
-	for ( int i = 0; i < TotalReads; i++ ){
-		Indexes[i]	=	i;
-	}
-	RadixSort(TotalReads,MapPos,Indexes,0,TotalReads);
+	for ( int i = 0; i < TotalReads; i++ ) Indexes[i] =	i;
 
-	for ( int j = 0; j < TotalReads; j++ ) {
-		printf("%"PRIu32"\n",MapPos[j]);
+	//		- ALGORITMO DE ORDENAMIENTO RADIX SORT
+	RadixSort(TotalReads,MapPos,Indexes);
+
+	//		- APLICACIÓN DEL INS2BIN
+	posBInst	=	0;
+	MoreFrags	=	0;
+	for ( int index = 0; index < TotalReads; index++ ) {
+		
+		//Aplicar el inst2bin
+
+		// Verificar si el siguiente read mapea en la misma posición
+		if ( MapPos[index]	==	MapPos[index+1] ) {
+			MoreFrags	=	1;
+		} else {
+			MoreFrags	=	0;
+		}
+
 	}
-	printf("\n\n");
-	for ( int j = 0; j < TotalReads; j++ ) {
-		printf("%"PRIu64"\n",Indexes[j]);
-	}
+
 
 	fclose( ALIGN );
 	
-	if(RefAlign)	 free(RefAlign);
     return 0;
 
 }
@@ -456,24 +464,32 @@ uint8_t BitsBase(uint8_t BRead, uint8_t BRef){
 	return(aux);
 };
 
+/*	RadixSort:	Algoritmo de ordenamiento por cubetas, se encargará de ordenar los índices
+ *  			de acuerdo con la posición de mapeo del read, MapPos
+ * @param:	TotalReads	->	Cantidad de reads que va a procesar el algoritmo
+ * @param:	MapPos		->	Vector que contiene las posiciones de mapeo de cada read
+ * @param:	Indexes		->	Vector de índices que se van a ordenar de acuerdo a MapPos
+*/				
+void RadixSort(int32_t TotalReads, uint32_t *MapPos, uint64_t *Indexes) {
 
-void RadixSort(int32_t TotalReads, uint32_t *MapPos, uint64_t *Indexes, uint32_t inf, uint32_t sup) {
-
+	// Buffer de ordenamiento temporal para MapPos
     uint64_t *buffer = (uint64_t *) malloc(TotalReads*sizeof(uint64_t));
     if (buffer  == NULL) printf("No hay espacio suficiente para buffer\n");
 
+	// Buffer de ordenamiento temporal para los índices
 	uint32_t *bufferAux = (uint32_t *) malloc(TotalReads*sizeof(uint32_t));
     if (bufferAux  == NULL) printf("No hay espacio suficiente para bufferAux\n");
     
     int total_digits = sizeof(uint64_t)*8;
     int32_t i;
     int shift, cur_t;
+
     for( shift = 0;	shift < total_digits;	shift += BASE_BITS ) { 
 
         int64_t bucket[BASE] = {0};
         int64_t local_bucket[BASE] = {0};
         
-		for(i = inf; i < sup; i++) local_bucket[DIGITS(MapPos[i], shift)]++;
+		for(i = 0; i < TotalReads; i++) local_bucket[DIGITS(MapPos[i], shift)]++;
         for(i = 0; i < BASE; i++) bucket[i] += local_bucket[i];
         for(i = 1; i < BASE; i++) bucket[i] += bucket[i - 1];
             
@@ -487,7 +503,7 @@ void RadixSort(int32_t TotalReads, uint32_t *MapPos, uint64_t *Indexes, uint32_t
                 }
             }
         }
-        for(i = inf; i < sup; i++){
+        for(i = 0; i < TotalReads; i++){
 			int Index = local_bucket[DIGITS(MapPos[i], shift)]++;
 			buffer[Index] = MapPos[i];
 			bufferAux[Index] = Indexes[i];	
@@ -495,14 +511,14 @@ void RadixSort(int32_t TotalReads, uint32_t *MapPos, uint64_t *Indexes, uint32_t
 
 		uint32_t* tmp = Indexes;
 		int32_t h=0;
-		for( i = inf; i < sup; i++ ){
+		for( i = 0; i < TotalReads; i++ ){
 			MapPos[i] = buffer[h];
 			Indexes[i] = bufferAux[h]; 
 			h++;
 		}
 	
 		h=0;
-		for( i = inf; i < sup; i++ ){
+		for( i = 0; i < TotalReads; i++ ){
 			buffer[h] = tmp[i];
 			h++;
 		}

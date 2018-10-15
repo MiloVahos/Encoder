@@ -159,7 +159,7 @@ void PrintByte2File(FILE *outB, uint8_t num, int nbits);
 
 
 int main (){
-
+	
 	srand(time(NULL));
 	clock_t begin, end;
 	begin = clock();
