@@ -42,18 +42,18 @@
 //**********************************Coding (Compression)(Inst --> binary coding)*********//
 void Inst2Bin(  uint8_t *BinInst, uint32_t *posBInst, char strand, uint8_t MoreFrags, 
                 uint16_t lendesc, uint16_t *Offsets, uint8_t *Oper, uint8_t *BaseRead, 
-                uint8_t *BaseRef, FILE *outB, FILE *outb2c, FILE *bin, long i, uint16_t EdDis);
+                uint8_t *BaseRef, long i);
 uint8_t TrdBitInst( int counter, uint8_t  rest, uint8_t  *Oper, uint8_t  *BaseRead, 
                     uint8_t BaseRef, uint16_t *offset, uint16_t lendesc , char strand, 
                     int *aux_i);
 uint8_t BitsOperR(uint8_t *oper, uint8_t *baseRead, uint16_t *offset, uint16_t lendesc , int *ii);
 uint8_t BitsOperF(uint8_t *oper, uint8_t *baseRead, uint16_t *offset, int *ii );
-uint8_t Preambulo(uint8_t moreFrags, char strand, uint16_t lendesc , uint16_t EdDis);
+uint8_t Preambulo(uint8_t moreFrags, char strand, uint16_t lendesc);
 uint8_t Offset(uint16_t offset, uint8_t *rest);
 uint8_t BitsBase(uint8_t BRead, uint8_t BRef);
 
 //**********************************File manipulation************************************//
-void PrintByte2File(FILE *outB, uint8_t num, int nbits);
+//void PrintByte2File(FILE *outB, uint8_t num, int nbits);
 
 //**********************************SORTING**********************************************//
 void RadixSort(int32_t TotalReads, uint32_t *MapPos, uint64_t *Indexes);
@@ -159,7 +159,9 @@ int main() {
 	for ( int index = 0; index < TotalReads; index++ ) {
 		
 		//Aplicar el inst2bin
-
+		Inst2Bin(	BinInst,&posBInst,strand[Indexes[posBInst]],MoreFrags,
+					lendesc[Indexes[posBInst]],Offset[Indexes[posBInst]],Oper[Indexes[posBInst]],
+					BaseRead[Indexes[posBInst]],BaseRef[Indexes[posBInst]],Indexes[index]);
 		// Verificar si el siguiente read mapea en la misma posición
 		if ( MapPos[index]	==	MapPos[index+1] ) {
 			MoreFrags	=	1;
@@ -192,8 +194,7 @@ int main() {
 */ 
 void Inst2Bin(  uint8_t *BinInst,  uint32_t *posBInst, char strand, uint8_t MoreFrags, 
                 uint16_t lendesc, uint16_t *Offsets, uint8_t *Oper, uint8_t *BaseRead, 
-                uint8_t *BaseRef, FILE *outB, FILE *outb2c, FILE *bin, long Index, uint16_t EdDis){
-	
+                uint8_t *BaseRef, long Index){
 	uint32_t    auxPosInst =   *posBInst ;
 	uint8_t     rest    =   0x0; 
     uint8_t     aux =   0;
@@ -202,10 +203,9 @@ void Inst2Bin(  uint8_t *BinInst,  uint32_t *posBInst, char strand, uint8_t More
 	int aux_i;
 
 	auxPosInst++;
-	BinInst[auxPosInst] =   Preambulo(MoreFrags,strand,lendesc,EdDis);
-
-	PrintByte2File(outB, BinInst[auxPosInst], 8); // Print to a Bytes File (as a string of '0' and '1' )
-
+	printf("Punto de control A\n");
+	BinInst[auxPosInst] =   Preambulo(MoreFrags,strand,lendesc);
+	printf("Punto de control C\n");
     if ( ((lendesc>0)&&((strand=='r')||(strand=='e'))) || ((lendesc>1)&&((strand=='f')||(strand=='c'))) ){
 		
         if ((strand=='r')||(strand=='e')){
@@ -215,12 +215,10 @@ void Inst2Bin(  uint8_t *BinInst,  uint32_t *posBInst, char strand, uint8_t More
 					auxPosInst++;
 
 					BinInst[auxPosInst] = Offset(Offsets[u], &rest);
-					PrintByte2File(outB, BinInst[auxPosInst], 8);
 
 					auxPosInst++;
 
 					BinInst[auxPosInst] = TrdBitInst(u, rest, Oper, BaseRead, BaseRef[u], Offsets, lendesc, strand, &aux_i);
-					PrintByte2File(outB, BinInst[auxPosInst], 8);
 
 					u=aux_i;
 				}
@@ -233,12 +231,10 @@ void Inst2Bin(  uint8_t *BinInst,  uint32_t *posBInst, char strand, uint8_t More
 					auxPosInst++;
 
 					BinInst[auxPosInst]= Offset(Offsets[u+1], &rest);
-					PrintByte2File(outB, BinInst[auxPosInst], 8);
 
 					auxPosInst++;
 
                     BinInst[auxPosInst]= TrdBitInst(u, rest, Oper, BaseRead, BaseRef[u], Offsets, lendesc, strand,&aux_i);
-					PrintByte2File(outB, BinInst[auxPosInst], 8);
 
 					u=aux_i;
 				}
@@ -246,34 +242,35 @@ void Inst2Bin(  uint8_t *BinInst,  uint32_t *posBInst, char strand, uint8_t More
 		}
     }
 	*posBInst=auxPosInst;
-	fprintf(outB,"\n \n");
 };
 
-uint8_t Preambulo(uint8_t moreFrags, char strand, uint16_t  lendesc, uint16_t EdDis ){
+uint8_t Preambulo(uint8_t moreFrags, char strand, uint16_t  lendesc){
 
 	uint8_t mask    =   0x01;
     uint8_t aux     =   0x0;
 
+	printf("More frags = %"PRIu8"\n",moreFrags);
+	printf("Strand = %c\n",strand);
+	printf("lendesc = %"PRIu16"\n",lendesc);
+
 	if (moreFrags==1) {
 		aux=mask|aux;   aux=aux<<3;
 	}
-	if ((lendesc<=1)){ 
+	if ((lendesc==0)){ 
 		if (strand=='F') mask=0x0;  //Forward
 		if (strand=='R') mask=0x1;  //Reverse
 		if (strand=='C') mask=0x2;  //Complement 10
 		if (strand=='E') mask=0x3;  //11 CreateMask8B(2,2);//0x011;   //rEvErsE complEmEnt
 	}else{
-		if (strand=='F') mask=0x4;  //CreateMask8B(3,1);//0x100;   //Forward
-		if (strand=='R') mask=0x5;  //CreateMask8B(3,1)|CreateMask8B(1,1);//0x101;   //Reverse
-		if (strand=='C') mask=0x6;  //CreateMask8B(3,2);//0x110;   //Complement
-		if (strand=='E') mask=0x7;  //CreateMask8B(3,3);//0x111;   //rEvErsE complEmEnt
+		printf("Punto de control B\n");
+		if (strand=='f') mask=0x4;  //CreateMask8B(3,1);//0x100;   //Forward
+		if (strand=='r') mask=0x5;  //CreateMask8B(3,1)|CreateMask8B(1,1);//0x101;   //Reverse
+		if (strand=='c') mask=0x6;  //CreateMask8B(3,2);//0x110;   //Complement
+		if (strand=='e') mask=0x7;  //CreateMask8B(3,3);//0x111;   //rEvErsE complEmEnt
 	};
-
-    if ((lendesc==1)&&(EdDis==1)){
-		if (strand=='R') mask=0x5;  //CreateMask8B(3,1)|CreateMask8B(1,1);//0x101;   //Reverse
-		if (strand=='E') mask=0x7;  //CreateMask8B(3,3);//0x111;   //rEvErsE complEmEnt
-    }
+	printf("Punto de control D\n");
 	aux=mask|aux;
+	printf("Punto de control E\n");
 	return(aux);
 };
 

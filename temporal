@@ -1,0 +1,3 @@
+printf("More frags = %"PRIu8"\n",MoreFrags);
+printf("Strand = %c\n",strand);
+printf("lendesc = %"PRIu16"\n",lendesc);
