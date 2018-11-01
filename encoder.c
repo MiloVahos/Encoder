@@ -37,6 +37,7 @@
 #define BASE (1 << BASE_BITS)
 #define MASK (BASE-1)
 #define DIGITS(v, shift) (((v) >> shift) & MASK)
+#define BYTES_PER_ERROR 2			// 1 BYTE PARA EL OFFSET, 1 BYTE PARA LA DESCRIPCIÓN
 
 // FUNCTIONS PROTOTYPES
 //**********************************Coding (Compression)(Inst --> binary coding)*********//
@@ -62,6 +63,7 @@ int main() {
 
 	// VARIABLES DE PROCESO
 	uint32_t	TotalReads;		// CANTIDAD TOTAL DE READS = B*C
+	uint64_t	NTErrors;		// CANTIDAD TOTAL DE ERRORES
 	uint32_t	B;				// CANTIDAD BASE DE READS
 	uint8_t		C;				// COVERAGE DE LA CANTIDAD DE READS
 	FILE 		*ALIGN;			// PUNTEROS A LOS ARCHIVOS
@@ -141,34 +143,46 @@ int main() {
 				}
 			}
 		}
+		fscanf( ALIGN, "%"SCNu64"",&NTErrors );
 	}
 
 	// 2. USANDO EL RADIX SORT SE ORDENA EL VECTOR DE ÍNDICES DE ACUERDO CON LA POSICIÓN DE MAPEO
-
 	// 		- SE CREA EL VECTOR DE ÍNDICES [0 - TotalReads-1]
 	Indexes	=   (uint64_t*)  malloc(TotalReads*sizeof(uint64_t));
 	if ( Indexes == NULL ) printf ("Not enough memory for Indexes");
 	for ( int i = 0; i < TotalReads; i++ ) Indexes[i] =	i;
-
+	
+	/*for (int  i = 0; i < 1600; i++ ) {
+		printf("Read %d\n",i);
+		for( int j = 0; j < lendesc[i]; j++ ){
+			printf("Oper = %c\n",Oper[i][j]);
+			printf("BaseRead = %c\n",BaseRead[i][j]);
+			printf("BaseRef = %c\n",BaseRef[i][j]);
+		}
+	}*/
 	//		- ALGORITMO DE ORDENAMIENTO RADIX SORT
 	RadixSort(TotalReads,MapPos,Indexes);
-
+	// Tanto MapoPos como Indexes terminan organizados por el algoritmo
 	//		- APLICACIÓN DEL INS2BIN
+	BinInst	=   (uint8_t*)  malloc((TotalReads*NTErrors*BYTES_PER_ERROR)*sizeof(uint8_t));
+	if ( BinInst == NULL ) printf ("Not enough memory for Indexes");
 	posBInst	=	0;
 	MoreFrags	=	0;
+	long AuxInd	=	0;
 	for ( int index = 0; index < TotalReads; index++ ) {
-		
-		//Aplicar el inst2bin
-		Inst2Bin(	BinInst,&posBInst,strand[Indexes[posBInst]],MoreFrags,
-					lendesc[Indexes[posBInst]],Offset[Indexes[posBInst]],Oper[Indexes[posBInst]],
-					BaseRead[Indexes[posBInst]],BaseRef[Indexes[posBInst]],Indexes[index]);
 		// Verificar si el siguiente read mapea en la misma posición
-		if ( MapPos[index]	==	MapPos[index+1] ) {
+		if ( MapPos[Indexes[index]]	==	MapPos[Indexes[index+1]] ) {
 			MoreFrags	=	1;
 		} else {
 			MoreFrags	=	0;
 		}
+		//Aplicar el inst2bin
+		AuxInd	=	Indexes[index];
 
+		/*Inst2Bin(	BinInst,&posBInst,strand[AuxInd],MoreFrags,
+					lendesc[AuxInd],Offset[AuxInd],Oper[AuxInd],
+					BaseRead[AuxInd],BaseRef[AuxInd],AuxInd );*/
+		
 	}
 
 
@@ -203,9 +217,7 @@ void Inst2Bin(  uint8_t *BinInst,  uint32_t *posBInst, char strand, uint8_t More
 	int aux_i;
 
 	auxPosInst++;
-	printf("Punto de control A\n");
 	BinInst[auxPosInst] =   Preambulo(MoreFrags,strand,lendesc);
-	printf("Punto de control C\n");
     if ( ((lendesc>0)&&((strand=='r')||(strand=='e'))) || ((lendesc>1)&&((strand=='f')||(strand=='c'))) ){
 		
         if ((strand=='r')||(strand=='e')){
@@ -246,31 +258,31 @@ void Inst2Bin(  uint8_t *BinInst,  uint32_t *posBInst, char strand, uint8_t More
 
 uint8_t Preambulo(uint8_t moreFrags, char strand, uint16_t  lendesc){
 
-	uint8_t mask    =   0x01;
-    uint8_t aux     =   0x0;
-
-	printf("More frags = %"PRIu8"\n",moreFrags);
-	printf("Strand = %c\n",strand);
-	printf("lendesc = %"PRIu16"\n",lendesc);
+	uint8_t mask	=	0x01; 
+	uint8_t aux		=	0x0;
 
 	if (moreFrags==1) {
 		aux=mask|aux;   aux=aux<<3;
 	}
-	if ((lendesc==0)){ 
-		if (strand=='F') mask=0x0;  //Forward
-		if (strand=='R') mask=0x1;  //Reverse
-		if (strand=='C') mask=0x2;  //Complement 10
-		if (strand=='E') mask=0x3;  //11 CreateMask8B(2,2);//0x011;   //rEvErsE complEmEnt
-	}else{
-		printf("Punto de control B\n");
-		if (strand=='f') mask=0x4;  //CreateMask8B(3,1);//0x100;   //Forward
-		if (strand=='r') mask=0x5;  //CreateMask8B(3,1)|CreateMask8B(1,1);//0x101;   //Reverse
-		if (strand=='c') mask=0x6;  //CreateMask8B(3,2);//0x110;   //Complement
-		if (strand=='e') mask=0x7;  //CreateMask8B(3,3);//0x111;   //rEvErsE complEmEnt
+	//printf ("lendesc %i EDis %i ///", lendesc, EdDis);
+	if ((lendesc<=1)){ //PERFECT MATCH CUIDADOOOOOOOOOOOOOOOOO
+		if (strand=='F') mask=0x0; //Forward
+		if (strand=='R') mask=0x1;   //Reverse
+		if (strand=='C') mask=0x2;   //Complement 10
+		if (strand=='E') mask=0x3;//11 CreateMask8B(2,2);//0x011;   //rEvErsE complEmEnt
+		//if (strand=='T') mask=0x011; //another Transform
+	}else{ //ERROR MATCH
+		if (strand=='f') mask=0x4;//CreateMask8B(3,1);//0x100;   //Forward
+		if (strand=='r') mask=0x5;//CreateMask8B(3,1)|CreateMask8B(1,1);//0x101;   //Reverse
+		if (strand=='c') mask=0x6;//CreateMask8B(3,2);//0x110;   //Complement
+		if (strand=='e') mask=0x7; //CreateMask8B(3,3);//0x111;   //rEvErsE complEmEnt
+		//if (strand=='T') mask=0x011; //another Transform
 	};
-	printf("Punto de control D\n");
+    if ((lendesc==1)){
+			if (strand=='R') mask=0x5;//CreateMask8B(3,1)|CreateMask8B(1,1);//0x101;   //Reverse
+			if (strand=='E') mask=0x7; //CreateMask8B(3,3);//0x111;   //rEvErsE complEmEnt
+    }
 	aux=mask|aux;
-	printf("Punto de control E\n");
 	return(aux);
 };
 
@@ -336,6 +348,7 @@ uint8_t TrdBitInst( int i, uint8_t  rest, uint8_t  *Oper, uint8_t  *BaseRead,
 		mask    =   0x00;
 	}else {
 		if ((mask2  !=  0x1)){
+			printf("%"PRIu8",%"PRIu8",%"PRIu8"   ",Oper[i],BaseRead[ii], BaseRef);
 			mask    =   BitsBase(BaseRead[ii], BaseRef);
 		}else{
 			mask=BaseRead[ii];
@@ -439,13 +452,13 @@ uint8_t BitsBase(uint8_t BRead, uint8_t BRef){
 		if (BRead>BRef){
 			auxInt  =   abs((int)BRead-(int)BRef);
 		}else{
-			if (BRead==BRef) printf("Error Grave entre bases iguales Base1 %u Base2 %u \n", BRead,  BRef);
+			if (BRead==BRef) printf(" A Error Grave entre bases iguales Base1 %u Base2 %u \n", BRead,  BRef);
 			else{
 				auxInt=((5-(int)BRef)+(int)BRead);
 			}
 		}
 		switch(auxInt){
-			case 0: printf("Error Grave entre bases iguales Base1 %u Base2 %u \n", BRead,  BRef);
+			case 0: printf(" B Error Grave entre bases iguales Base1 %u Base2 %u \n", BRead,  BRef);
 			break;
 			case 1: aux=0x0;  //Distancia 1
 			break;
@@ -455,7 +468,7 @@ uint8_t BitsBase(uint8_t BRead, uint8_t BRef){
 			break;
 			case 4: aux=0x3;//CreateMask8B(2,2); //Distancia 4 0x11
 			break;
-			default: printf("Error Diferencia Grande bases Base1 %u BAse2 %u \n",  BRead,  BRef);
+			default: printf("Error en la conversión circular Base1 %u BAse2 %u \n",  BRead,  BRef);
 		}
 	}
 	return(aux);
