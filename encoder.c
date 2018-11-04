@@ -43,7 +43,7 @@
 //**********************************Coding (Compression)(Inst --> binary coding)*********//
 void Inst2Bin(  uint8_t *BinInst, uint32_t *posBInst, char strand, uint8_t MoreFrags, 
                 uint16_t lendesc, uint16_t *Offsets, uint8_t *Oper, uint8_t *BaseRead, 
-                uint8_t *BaseRef, long i);
+                uint8_t *BaseRef, uint64_t i);
 uint8_t TrdBitInst( int counter, uint8_t  rest, uint8_t  *Oper, uint8_t  *BaseRead, 
                     uint8_t BaseRef, uint16_t *offset, uint16_t lendesc , char strand, 
                     int *aux_i);
@@ -114,33 +114,41 @@ int main() {
 			fscanf( ALIGN, "%"SCNu16"", &lendesc[i] );
 			fscanf( ALIGN, " %c", &strand[i] );
 
-			//printf( "%"PRIu32"\n", MapPos[i] ); fflush(stdout);
-			//printf( "%"PRIu16"\n", lendesc[i] ); fflush(stdout);
-			//printf( "%c\n", strand[i] ); fflush(stdout);
-
 			if ( lendesc[i] != 0 ) {
+
+				Oper[i]        =   (uint8_t*)  malloc(lendesc[i]*sizeof(uint8_t));
+				if ( Oper[i] == NULL ) printf ("Not enough memory for Oper");
+				Offset[i]        =   (uint16_t*)  malloc(lendesc[i]*sizeof(uint16_t));
+				if ( Offset[i] == NULL ) printf ("Not enough memory for lendesc");
+				BaseRef[i]        =   (uint8_t*)  malloc(lendesc[i]*sizeof(uint8_t));
+				if ( BaseRef[i] == NULL ) printf ("Not enough memory for BaseRef");
+				BaseRead[i]        =   (uint8_t*)  malloc(lendesc[i]*sizeof(uint8_t));
+				if ( BaseRead[i] == NULL ) printf ("Not enough memory for BaseRead");
+
 				for ( int j = 0; j < lendesc[i]; j++ ) {
 
-					Oper[i]        =   (uint8_t*)  malloc(lendesc[i]*sizeof(uint8_t));
-					if ( Oper[i] == NULL ) printf ("Not enough memory for Oper");
-					Offset[i]        =   (uint16_t*)  malloc(lendesc[i]*sizeof(uint16_t));
-					if ( Offset[i] == NULL ) printf ("Not enough memory for lendesc");
-					BaseRef[i]        =   (uint8_t*)  malloc(lendesc[i]*sizeof(uint8_t));
-					if ( BaseRef[i] == NULL ) printf ("Not enough memory for BaseRef");
-					BaseRead[i]        =   (uint8_t*)  malloc(lendesc[i]*sizeof(uint8_t));
-					if ( BaseRead[i] == NULL ) printf ("Not enough memory for BaseRead");
+					uint8_t oper, baseref, baseread;
+					uint16_t offset;
 
-					fscanf( ALIGN, " %c", &Oper[i][j] );
-					fscanf( ALIGN, "%"SCNu16"", &Offset[i][j] );
-					fscanf( ALIGN, " %c", &BaseRef[i][j] );
-					fscanf( ALIGN, " %c", &BaseRead[i][j] );
+					fscanf( ALIGN, " %c", &oper );
+					fscanf( ALIGN, "%"SCNu16"", &offset );
+					fscanf( ALIGN, " %c", &baseref );
+					fscanf( ALIGN, " %c", &baseread );
 
-					//printf( "%c\n", Oper[i][j] );
-					//printf( "%"PRIu16"\n", Offset[i][j] );
-					//printf( "%c\n", BaseRef[i][j] );
-					//printf( "%c\n", BaseRead[i][j] );
-				
+					memcpy( &Oper[i][j], &oper, sizeof(uint8_t));
+					memcpy( &Offset[i][j], &offset, sizeof(uint16_t));
+					memcpy( &BaseRef[i][j], &baseref, sizeof(uint8_t));
+					memcpy( &BaseRead[i][j], &baseread, sizeof(uint8_t));
 				}
+			} else {
+				Oper[i]        =   (uint8_t*)  malloc(sizeof(uint8_t));
+				if ( Oper[i] == NULL ) printf ("Not enough memory for Oper");
+				Offset[i]        =   (uint16_t*)  malloc(sizeof(uint16_t));
+				if ( Offset[i] == NULL ) printf ("Not enough memory for lendesc");
+				BaseRef[i]        =   (uint8_t*)  malloc(sizeof(uint8_t));
+				if ( BaseRef[i] == NULL ) printf ("Not enough memory for BaseRef");
+				BaseRead[i]        =   (uint8_t*)  malloc(sizeof(uint8_t));
+				if ( BaseRead[i] == NULL ) printf ("Not enough memory for BaseRead");
 			}
 		}
 		fscanf( ALIGN, "%"SCNu64"",&NTErrors );
@@ -151,24 +159,20 @@ int main() {
 	Indexes	=   (uint64_t*)  malloc(TotalReads*sizeof(uint64_t));
 	if ( Indexes == NULL ) printf ("Not enough memory for Indexes");
 	for ( int i = 0; i < TotalReads; i++ ) Indexes[i] =	i;
-	
-	/*for (int  i = 0; i < 1600; i++ ) {
-		printf("Read %d\n",i);
-		for( int j = 0; j < lendesc[i]; j++ ){
-			printf("Oper = %c\n",Oper[i][j]);
-			printf("BaseRead = %c\n",BaseRead[i][j]);
-			printf("BaseRef = %c\n",BaseRef[i][j]);
-		}
-	}*/
+
 	//		- ALGORITMO DE ORDENAMIENTO RADIX SORT
-	RadixSort(TotalReads,MapPos,Indexes);
-	// Tanto MapoPos como Indexes terminan organizados por el algoritmo
+	uint32_t *AuxMapPos;
+	AuxMapPos	=	(uint32_t*) malloc( TotalReads*sizeof(uint32_t));
+	memcpy(AuxMapPos,MapPos,TotalReads*sizeof(uint32_t));
+	RadixSort(TotalReads,AuxMapPos,Indexes);
+	free(AuxMapPos);
+	
 	//		- APLICACIÓN DEL INS2BIN
 	BinInst	=   (uint8_t*)  malloc((TotalReads*NTErrors*BYTES_PER_ERROR)*sizeof(uint8_t));
 	if ( BinInst == NULL ) printf ("Not enough memory for Indexes");
 	posBInst	=	0;
 	MoreFrags	=	0;
-	long AuxInd	=	0;
+	uint64_t AuxInd	=	0;
 	for ( int index = 0; index < TotalReads; index++ ) {
 		// Verificar si el siguiente read mapea en la misma posición
 		if ( MapPos[Indexes[index]]	==	MapPos[Indexes[index+1]] ) {
@@ -179,9 +183,9 @@ int main() {
 		//Aplicar el inst2bin
 		AuxInd	=	Indexes[index];
 
-		/*Inst2Bin(	BinInst,&posBInst,strand[AuxInd],MoreFrags,
+		Inst2Bin(	BinInst,&posBInst,strand[AuxInd],MoreFrags,
 					lendesc[AuxInd],Offset[AuxInd],Oper[AuxInd],
-					BaseRead[AuxInd],BaseRef[AuxInd],AuxInd );*/
+					BaseRead[AuxInd],BaseRef[AuxInd],AuxInd );
 		
 	}
 
@@ -208,7 +212,7 @@ int main() {
 */ 
 void Inst2Bin(  uint8_t *BinInst,  uint32_t *posBInst, char strand, uint8_t MoreFrags, 
                 uint16_t lendesc, uint16_t *Offsets, uint8_t *Oper, uint8_t *BaseRead, 
-                uint8_t *BaseRef, long Index){
+                uint8_t *BaseRef, uint64_t Index){
 	uint32_t    auxPosInst =   *posBInst ;
 	uint8_t     rest    =   0x0; 
     uint8_t     aux =   0;
