@@ -1,3 +1,13 @@
 printf("More frags = %"PRIu8"\n",MoreFrags);
-printf("Strand = %c\n",strand);
-printf("lendesc = %"PRIu16"\n",lendesc);
+printf("Strand = %c\n",strand[AuxInd]);
+printf("lendesc = %"PRIu16"\n",lendesc[AuxInd]);
+printf("posbInst = %"PRIu32"\n",posBInst);
+
+/*for (int  i = 0; i < TotalReads; i++ ) {
+		for( int j = 0; j < lendesc[i]; j++ ){
+			printf("%c ",Oper[i][j]);
+			printf("%c ",BaseRead[i][j]);
+			printf("%c -",BaseRef[i][j]);
+		}
+		printf("\n");
+	}*/

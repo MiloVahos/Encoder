@@ -13,3 +13,5 @@
   - Revisar nuevamente la lectura de los datos desde el archivo de alineamiento
 ## 4 de Noviembre de 2018
     - El error que tenía era que estaba inicializando el puntero dentro del ciclo, entonces se reescribía con cada pasada del ciclo
+    [] No olvidar liberar la memoria
+    [] Aplicar lo del preámbulo

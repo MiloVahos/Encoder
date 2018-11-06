@@ -173,22 +173,23 @@ int main() {
 	posBInst	=	0;
 	MoreFrags	=	0;
 	uint64_t AuxInd	=	0;
-	for ( int index = 0; index < TotalReads; index++ ) {
+
+	for ( int index = 0; index < 10; index++ ) {
+
 		// Verificar si el siguiente read mapea en la misma posición
-		if ( MapPos[Indexes[index]]	==	MapPos[Indexes[index+1]] ) {
-			MoreFrags	=	1;
-		} else {
-			MoreFrags	=	0;
-		}
+		if ( MapPos[Indexes[index]]	==	MapPos[Indexes[index+1]] ) MoreFrags	=	1;
+		else MoreFrags	=	0;
+		
 		//Aplicar el inst2bin
 		AuxInd	=	Indexes[index];
-
 		Inst2Bin(	BinInst,&posBInst,strand[AuxInd],MoreFrags,
 					lendesc[AuxInd],Offset[AuxInd],Oper[AuxInd],
 					BaseRead[AuxInd],BaseRef[AuxInd],AuxInd );
 		
 	}
 
+	//for ( int i = 0; i < TotalReads*NTErrors*BYTES_PER_ERROR; i++ ) printf("%"PRIu8" ",BinInst[i]);
+	
 
 	fclose( ALIGN );
 	
