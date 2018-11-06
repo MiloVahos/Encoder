@@ -53,9 +53,6 @@ uint8_t Preambulo(uint8_t moreFrags, char strand, uint16_t lendesc);
 uint8_t Offset(uint16_t offset, uint8_t *rest);
 uint8_t BitsBase(uint8_t BRead, uint8_t BRef);
 
-//**********************************File manipulation************************************//
-//void PrintByte2File(FILE *outB, uint8_t num, int nbits);
-
 //**********************************SORTING**********************************************//
 void RadixSort(int32_t TotalReads, uint32_t *MapPos, uint64_t *Indexes);
 
@@ -168,29 +165,28 @@ int main() {
 	free(AuxMapPos);
 	
 	//		- APLICACIÓN DEL INS2BIN
-	BinInst	=   (uint8_t*)  malloc((TotalReads*NTErrors*BYTES_PER_ERROR)*sizeof(uint8_t));
+	uint64_t TamBinInst	= TotalReads*NTErrors*BYTES_PER_ERROR;
+	BinInst	=   (uint8_t*)  malloc(TamBinInst*sizeof(uint8_t));
 	if ( BinInst == NULL ) printf ("Not enough memory for Indexes");
 	posBInst	=	0;
 	MoreFrags	=	0;
 	uint64_t AuxInd	=	0;
 
-	for ( int index = 0; index < 10; index++ ) {
+	for ( int index = 0; index < TotalReads; index++ ) {
 
 		// Verificar si el siguiente read mapea en la misma posición
-		if ( MapPos[Indexes[index]]	==	MapPos[Indexes[index+1]] ) MoreFrags	=	1;
+		AuxInd	=	Indexes[index];
+		if ( (index < TotalReads-1) && (MapPos[AuxInd]	==	MapPos[AuxInd+1]) ) MoreFrags	=	1;
 		else MoreFrags	=	0;
 		
 		//Aplicar el inst2bin
-		AuxInd	=	Indexes[index];
+		
 		Inst2Bin(	BinInst,&posBInst,strand[AuxInd],MoreFrags,
 					lendesc[AuxInd],Offset[AuxInd],Oper[AuxInd],
 					BaseRead[AuxInd],BaseRef[AuxInd],AuxInd );
 		
 	}
-
-	//for ( int i = 0; i < TotalReads*NTErrors*BYTES_PER_ERROR; i++ ) printf("%"PRIu8" ",BinInst[i]);
 	
-
 	fclose( ALIGN );
 	
     return 0;
@@ -214,15 +210,17 @@ int main() {
 void Inst2Bin(  uint8_t *BinInst,  uint32_t *posBInst, char strand, uint8_t MoreFrags, 
                 uint16_t lendesc, uint16_t *Offsets, uint8_t *Oper, uint8_t *BaseRead, 
                 uint8_t *BaseRef, uint64_t Index){
+
 	uint32_t    auxPosInst =   *posBInst ;
 	uint8_t     rest    =   0x0; 
-    uint8_t     aux =   0;
+    uint8_t     aux 	=   0;
     uint8_t     MoreErr =   1;
 
 	int aux_i;
 
 	auxPosInst++;
 	BinInst[auxPosInst] =   Preambulo(MoreFrags,strand,lendesc);
+
     if ( ((lendesc>0)&&((strand=='r')||(strand=='e'))) || ((lendesc>1)&&((strand=='f')||(strand=='c'))) ){
 		
         if ((strand=='r')||(strand=='e')){
@@ -289,13 +287,6 @@ uint8_t Preambulo(uint8_t moreFrags, char strand, uint16_t  lendesc){
     }
 	aux=mask|aux;
 	return(aux);
-};
-
-void PrintByte2File(FILE *outB, uint8_t num, int nbits){
-	for( int i = nbits-1 ; i>=0 ; --i )
-	    if( num & (1 << i) ) fprintf(outB,"%c", '1');
-	        else fprintf(outB,"%c", '0');
-	 fprintf(outB,"\t");
 };
 
 /*  8 bits menos significativos del offset. Los 2 bits + significativos en el 3er Entero, 
@@ -410,7 +401,6 @@ uint8_t BitsOperF(uint8_t *oper, uint8_t *baseRead, uint16_t *offset, int *ii ){
 	return (aux);
 
 };
-
 
 uint8_t BitsOperR(uint8_t *oper, uint8_t *baseRead, uint16_t *offset, uint16_t lendesc , int *ii ){ 
 

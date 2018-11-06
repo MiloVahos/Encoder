@@ -12,6 +12,10 @@
   - Error Grave entre bases iguales Base1 0 Base2 0: Le debo prestar atención cuando la operacion sea s o S o i.
   - Revisar nuevamente la lectura de los datos desde el archivo de alineamiento
 ## 4 de Noviembre de 2018
-    - El error que tenía era que estaba inicializando el puntero dentro del ciclo, entonces se reescribía con cada pasada del ciclo
-    [] No olvidar liberar la memoria
-    [] Aplicar lo del preámbulo
+  - El error que tenía era que estaba inicializando el puntero dentro del ciclo, entonces se reescribía con cada pasada del ciclo
+  [] No olvidar liberar la memoria
+  [] Aplicar lo del preámbulo
+## 6 de Noviembre de 2018
+  ### Objetivo: Encontrar porque el BinInst tiene como salida todos sus valores en 0
+  - Del preámbulo están saliendo valores
+  - Los elementos hasta totalReads tiene el valor del preámbulo
