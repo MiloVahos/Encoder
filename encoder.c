@@ -54,7 +54,8 @@ uint8_t Offset(uint16_t offset, uint8_t *rest);
 uint8_t BitsBase(uint8_t BRead, uint8_t BRef);
 
 //**********************************SORTING**********************************************//
-void RadixSort(int32_t TotalReads, uint32_t *MapPos, uint64_t *Indexes);
+void RadixSort(uint32_t TotalReads, uint32_t *MapPos, uint64_t *Indexes);
+void EscalarBases(uint8_t *Base);
 
 int main() {
 
@@ -166,6 +167,7 @@ int main() {
 	
 	//		- APLICACIÓN DEL INS2BIN
 	uint64_t TamBinInst	= TotalReads*NTErrors*BYTES_PER_ERROR;
+	
 	BinInst	=   (uint8_t*)  malloc(TamBinInst*sizeof(uint8_t));
 	if ( BinInst == NULL ) printf ("Not enough memory for Indexes");
 	posBInst	=	0;
@@ -186,7 +188,8 @@ int main() {
 					BaseRead[AuxInd],BaseRef[AuxInd],AuxInd );
 		
 	}
-	
+
+
 	fclose( ALIGN );
 	
     return 0;
@@ -220,39 +223,54 @@ void Inst2Bin(  uint8_t *BinInst,  uint32_t *posBInst, char strand, uint8_t More
 
 	auxPosInst++;
 	BinInst[auxPosInst] =   Preambulo(MoreFrags,strand,lendesc);
+	
+    if ( lendesc > 0 ){
 
-    if ( ((lendesc>0)&&((strand=='r')||(strand=='e'))) || ((lendesc>1)&&((strand=='f')||(strand=='c'))) ){
-		
         if ((strand=='r')||(strand=='e')){
+
 			for (uint8_t  u=0; u<lendesc; u++){ //Converting each separated error of the read
-				if ((Oper[u]!='_')&&(BaseRead[u]>=0)&&(BaseRead[u]<=4)){
 
-					auxPosInst++;
+				auxPosInst++;
+				printf("%"PRIu16"\n",Offsets[u]);
+				BinInst[auxPosInst] = Offset(Offsets[u], &rest);
+				printf("%"PRIu8"\n",BinInst[auxPosInst]);
+				auxPosInst++;
 
-					BinInst[auxPosInst] = Offset(Offsets[u], &rest);
 
-					auxPosInst++;
-
-					BinInst[auxPosInst] = TrdBitInst(u, rest, Oper, BaseRead, BaseRef[u], Offsets, lendesc, strand, &aux_i);
-
-					u=aux_i;
+				printf("%c ",Oper[u]);
+				printf("%c ",BaseRead[u]);
+				printf("%c ",BaseRef[u]);
+				if ( (Oper[u] == 's') || (Oper[u] == 'S') || (Oper[u] == 'i') ) {
+					EscalarBases(&BaseRead[u]);
+					EscalarBases(&BaseRef[u]);
 				}
+				BinInst[auxPosInst] = TrdBitInst(u, rest, Oper, BaseRead, BaseRef[u], Offsets, lendesc, strand, &aux_i);
+				printf("%"PRIu8"\n",BinInst[auxPosInst]);
+				int x = getchar();
+
+				u=aux_i;
+
+				// if ((BaseRead[u]>=0)&&(BaseRead[u]<=4)){} // FOR REAL ALIGNERS - BOTH CASES
+					
 			}
 		}else{  
             
             for (int  u=lendesc-1;u>=0; u--){
+				
+				auxPosInst++;
 
-				if ((Oper[u]!='_')&&(BaseRead[u]>=0)&&(BaseRead[u]<=4)){
-					auxPosInst++;
+				BinInst[auxPosInst]= Offset(Offsets[u+1], &rest);
 
-					BinInst[auxPosInst]= Offset(Offsets[u+1], &rest);
+				auxPosInst++;
 
-					auxPosInst++;
-
-                    BinInst[auxPosInst]= TrdBitInst(u, rest, Oper, BaseRead, BaseRef[u], Offsets, lendesc, strand,&aux_i);
-
-					u=aux_i;
+				if ( (Oper[u] == 's') || (Oper[u] == 'S') || (Oper[u] == 'i') ) {
+					EscalarBases(&BaseRead[u]);
+					EscalarBases(&BaseRef[u]);
 				}
+				BinInst[auxPosInst]= TrdBitInst(u, rest, Oper, BaseRead, BaseRef[u], Offsets, lendesc, strand,&aux_i);
+
+				u=aux_i;
+				
 			}
 		}
     }
@@ -268,7 +286,7 @@ uint8_t Preambulo(uint8_t moreFrags, char strand, uint16_t  lendesc){
 		aux=mask|aux;   aux=aux<<3;
 	}
 	//printf ("lendesc %i EDis %i ///", lendesc, EdDis);
-	if ((lendesc<=1)){ //PERFECT MATCH CUIDADOOOOOOOOOOOOOOOOO
+	if ((lendesc==0)){ //PERFECT MATCH CUIDADOOOOOOOOOOOOOOOOO
 		if (strand=='F') mask=0x0; //Forward
 		if (strand=='R') mask=0x1;   //Reverse
 		if (strand=='C') mask=0x2;   //Complement 10
@@ -281,10 +299,10 @@ uint8_t Preambulo(uint8_t moreFrags, char strand, uint16_t  lendesc){
 		if (strand=='e') mask=0x7; //CreateMask8B(3,3);//0x111;   //rEvErsE complEmEnt
 		//if (strand=='T') mask=0x011; //another Transform
 	};
-    if ((lendesc==1)){
+    /*if ((lendesc==1)){
 			if (strand=='R') mask=0x5;//CreateMask8B(3,1)|CreateMask8B(1,1);//0x101;   //Reverse
 			if (strand=='E') mask=0x7; //CreateMask8B(3,3);//0x111;   //rEvErsE complEmEnt
-    }
+    }*/
 	aux=mask|aux;
 	return(aux);
 };
@@ -344,7 +362,6 @@ uint8_t TrdBitInst( int i, uint8_t  rest, uint8_t  *Oper, uint8_t  *BaseRead,
 		mask    =   0x00;
 	}else {
 		if ((mask2  !=  0x1)){
-			printf("%"PRIu8",%"PRIu8",%"PRIu8"   ",Oper[i],BaseRead[ii], BaseRef);
 			mask    =   BitsBase(BaseRead[ii], BaseRef);
 		}else{
 			mask=BaseRead[ii];
@@ -475,7 +492,7 @@ uint8_t BitsBase(uint8_t BRead, uint8_t BRef){
  * @param:	MapPos		->	Vector que contiene las posiciones de mapeo de cada read
  * @param:	Indexes		->	Vector de índices que se van a ordenar de acuerdo a MapPos
 */				
-void RadixSort(int32_t TotalReads, uint32_t *MapPos, uint64_t *Indexes) {
+void RadixSort(uint32_t TotalReads, uint32_t *MapPos, uint64_t *Indexes) {
 
 	// Buffer de ordenamiento temporal para MapPos
     uint64_t *buffer = (uint64_t *) malloc(TotalReads*sizeof(uint64_t));
@@ -529,5 +546,32 @@ void RadixSort(int32_t TotalReads, uint32_t *MapPos, uint64_t *Indexes) {
 		}
     }
     if(buffer) free(buffer);
+}
+
+/* EscalarBases: Cuando strand sea s S i, se cambian las bases así:
+ * A -> 0
+ * C -> 1
+ * G -> 2
+ * T -> 3
+ * N -> 4
+ */ 
+void EscalarBases(uint8_t *Base) {
+	switch (*Base){
+		case 'A':
+			*Base = 0;
+		break;
+		case 'C':
+			*Base = 1;
+		break;
+		case 'G':
+			*Base = 2;
+		break;
+		case 'T':
+			*Base = 3;
+		break;
+		case 'N':
+			*Base = 4;
+		break;
+	}
 }
 

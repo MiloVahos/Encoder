@@ -19,3 +19,16 @@
   ### Objetivo: Encontrar porque el BinInst tiene como salida todos sus valores en 0
   - Del preámbulo están saliendo valores
   - Los elementos hasta totalReads tiene el valor del preámbulo
+## 10 de Noviembre
+  ### Objetivo: Encontrar porque el BinInst tiene como salida todos sus valores en 0
+  - Por cuestión de compatibilidad se trabaja a partir de la posición siguiente a la 0, por notación de alineadores
+  #### Definición de los campos:
+    8 bits que contienen un PRELUDE (hasta el momento, se va a cambiar por que en 8 bits quepan los preludios de dos reads (4 bits por preludio))
+    8 bits los menos significativos del offset
+    8 bits que se dividen así:
+      2 bits que faltan del offset
+      1 bits que indica si este es el último error
+      3 bits opcode (codigo de la operación)
+      2 bits que indican la diferencia entre las bases
+
+  EUREKA

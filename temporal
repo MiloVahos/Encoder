@@ -11,3 +11,14 @@ printf("posbInst = %"PRIu32"\n",posBInst);
 		}
 		printf("\n");
 	}*/
+
+printf("%"PRIu64"",TamBinInst);
+
+	printf("%c ",strand);
+	printf("%"PRIu8" ",MoreFrags);
+	printf("%"PRIu16" ",lendesc);
+
+		printf("%"PRIu8" ",BinInst[auxPosInst]);
+
+
+			printf("%"PRIu8",%"PRIu8",%"PRIu8"   ",Oper[i],BaseRead[ii], BaseRef);
