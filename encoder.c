@@ -170,7 +170,7 @@ int main() {
 	free(AuxMapPos);
 	
 	//		- APLICACIÓN DEL INS2BIN
-	uint64_t TamBinInst	= TotalReads*NTErrors*BYTES_PER_ERROR;
+	uint64_t TamBinInst	= NTErrors*BYTES_PER_ERROR;
 	uint32_t TamPreabulo = floor( TotalReads/2 )+1;
 	BinInst	=   (uint8_t*)  malloc(TamBinInst*sizeof(uint8_t));
 	if ( BinInst == NULL ) printf ("Not enough memory for BinInst");
@@ -229,16 +229,17 @@ void Inst2Bin(  uint8_t *BinInst, uint8_t *Preambulos, uint32_t *posBInst, uint3
 	uint8_t     rest    =   0x0; 
     uint8_t     aux 	=   0;
     uint8_t     MoreErr =   1;
-
 	int aux_i;
 	if ( (*flagPream) == 0 ) {
 		// En este caso llena los 4 bits más significativos
 		Preambulos[auxPosPream] = 	0;
 		Preambulos[auxPosPream]	=	Preambulo(MoreFrags,strand,lendesc,*flagPream,Preambulos[auxPosPream]);
+		printf("Preambulos: %"PRIu8", %"PRIu32" \n", Preambulos[auxPosPream],auxPosPream);
 		(*flagPream) = 1;
 	} else {
 		// En este caso llena los 4 bits menos significativos
 		Preambulos[auxPosPream]	=	Preambulo(MoreFrags,strand,lendesc,*flagPream,Preambulos[auxPosPream]);
+		printf("Preambulos: %"PRIu8", %"PRIu32" \n", Preambulos[auxPosPream],auxPosPream);
 		(*flagPream) = 0;
 		auxPosPream++;
 	}
@@ -260,6 +261,7 @@ void Inst2Bin(  uint8_t *BinInst, uint8_t *Preambulos, uint32_t *posBInst, uint3
 					EscalarBases(&BaseRead[u]);
 					EscalarBases(&BaseRef[u]);
 				}
+				printf("%c\n",Oper[u]);
 				BinInst[auxPosInst] = TrdBitInst(u, rest, Oper, BaseRead, BaseRef[u], Offsets, lendesc, strand, &aux_i);
 				u=aux_i;
 
