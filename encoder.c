@@ -28,6 +28,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
+#include <math.h>
 #include <inttypes.h>
 #include <omp.h>
 
@@ -41,15 +42,15 @@
 
 // FUNCTIONS PROTOTYPES
 //**********************************Coding (Compression)(Inst --> binary coding)*********//
-void Inst2Bin(  uint8_t *BinInst, uint32_t *posBInst, char strand, uint8_t MoreFrags, 
-                uint16_t lendesc, uint16_t *Offsets, uint8_t *Oper, uint8_t *BaseRead, 
-                uint8_t *BaseRef, uint64_t i);
+void Inst2Bin(  uint8_t *BinInst, uint8_t *Preambulos, uint32_t *posBInst, uint32_t *posPream,
+				char strand, uint8_t MoreFrags, uint16_t lendesc, uint16_t *Offsets, 
+				uint8_t *Oper, uint8_t *BaseRead, uint8_t *BaseRef, uint64_t i, uint8_t *flagPream );
 uint8_t TrdBitInst( int counter, uint8_t  rest, uint8_t  *Oper, uint8_t  *BaseRead, 
                     uint8_t BaseRef, uint16_t *offset, uint16_t lendesc , char strand, 
                     int *aux_i);
 uint8_t BitsOperR(uint8_t *oper, uint8_t *baseRead, uint16_t *offset, uint16_t lendesc , int *ii);
 uint8_t BitsOperF(uint8_t *oper, uint8_t *baseRead, uint16_t *offset, int *ii );
-uint8_t Preambulo(uint8_t moreFrags, char strand, uint16_t lendesc);
+uint8_t Preambulo(uint8_t moreFrags, char strand, uint16_t lendesc, uint8_t flagPream, uint8_t actual);
 uint8_t Offset(uint16_t offset, uint8_t *rest);
 uint8_t BitsBase(uint8_t BRead, uint8_t BRef);
 
@@ -69,6 +70,8 @@ int main() {
 	// VARIABLES DE OPERACIÓN
 	uint64_t	*Indexes;		// Índices referentes a los Reads
 	uint32_t	posBInst;		// Índice que controla BinInst
+	uint32_t	posPream;		// Índice de control del arreglo de preámbulos
+	uint8_t		flagPream;		// Bandera que indica cuando se aumenta posPream
 	uint8_t		MoreFrags;		// Indica si el siguiente Read Mapea en la misma posición
 	uint32_t	*MapPos;        // Posición de Matching respecto a la referencia
 	uint16_t  	*lendesc;    	// Cantidad de errores total en el Read
@@ -80,6 +83,7 @@ int main() {
 
 	// VARIABLES DE SALID DEL Inst2Bin
 	uint8_t		*BinInst;		// Arreglo de salida del Inst2Bin
+	uint8_t		*Preambulos;	// Arreglo de salida con los preámbulos
 
 	// 1. OBTENER LOS DATOS QUE PROVIENEN DEL ARG
 	ALIGN	= 	fopen( "GRCh38.align" , "r" );
@@ -167,11 +171,16 @@ int main() {
 	
 	//		- APLICACIÓN DEL INS2BIN
 	uint64_t TamBinInst	= TotalReads*NTErrors*BYTES_PER_ERROR;
-	
+	uint32_t TamPreabulo = floor( TotalReads/2 )+1;
 	BinInst	=   (uint8_t*)  malloc(TamBinInst*sizeof(uint8_t));
-	if ( BinInst == NULL ) printf ("Not enough memory for Indexes");
+	if ( BinInst == NULL ) printf ("Not enough memory for BinInst");
+	Preambulos	=	(uint8_t*) malloc (TamPreabulo*sizeof(uint8_t));
+	if ( Preambulos == NULL ) printf ("Not enough memory for Preambulos");
+
 	posBInst	=	0;
+	posPream	=	0;
 	MoreFrags	=	0;
+	flagPream	=	0;
 	uint64_t AuxInd	=	0;
 
 	for ( int index = 0; index < TotalReads; index++ ) {
@@ -183,9 +192,9 @@ int main() {
 		
 		//Aplicar el inst2bin
 		
-		Inst2Bin(	BinInst,&posBInst,strand[AuxInd],MoreFrags,
+		Inst2Bin(	BinInst, Preambulos,&posBInst,&posPream, strand[AuxInd],MoreFrags,
 					lendesc[AuxInd],Offset[AuxInd],Oper[AuxInd],
-					BaseRead[AuxInd],BaseRef[AuxInd],AuxInd );
+					BaseRead[AuxInd],BaseRef[AuxInd],AuxInd, &flagPream );
 		
 	}
 
@@ -200,6 +209,7 @@ int main() {
 
 /**
  * @param: BinInst	 -> Arreglo de salida, depende de la cantidad de reads y mutaciones
+ * @param: Preambulos-> Arreglo de salida, corresponde a los preámbulos de los reads
  * @param: posBInst  -> Índice de BinInst
  * @param: strand	 -> Sentido del matching (Forward(F), Reverse(R), Complement(C), Reverse Complement(E))
  * @param: MoreFrags -> Bandera que indica si el siguiente read mapea en la misma posición
@@ -210,19 +220,31 @@ int main() {
  * @param: BaseRef	 -> Vector de Bases en la referencia
  * @param: Index	 -> Posición de este read de acuerdo al nuevo ordenamiento
 */ 
-void Inst2Bin(  uint8_t *BinInst,  uint32_t *posBInst, char strand, uint8_t MoreFrags, 
-                uint16_t lendesc, uint16_t *Offsets, uint8_t *Oper, uint8_t *BaseRead, 
-                uint8_t *BaseRef, uint64_t Index){
+void Inst2Bin(  uint8_t *BinInst, uint8_t *Preambulos, uint32_t *posBInst, uint32_t *posPream, 
+				char strand, uint8_t MoreFrags, uint16_t lendesc, uint16_t *Offsets, 
+				uint8_t *Oper, uint8_t *BaseRead, uint8_t *BaseRef, uint64_t Index, uint8_t *flagPream){
 
 	uint32_t    auxPosInst =   *posBInst ;
+	uint32_t    auxPosPream	=	*posPream;
 	uint8_t     rest    =   0x0; 
     uint8_t     aux 	=   0;
     uint8_t     MoreErr =   1;
 
 	int aux_i;
+	if ( (*flagPream) == 0 ) {
+		// En este caso llena los 4 bits más significativos
+		Preambulos[auxPosPream] = 	0;
+		Preambulos[auxPosPream]	=	Preambulo(MoreFrags,strand,lendesc,*flagPream,Preambulos[auxPosPream]);
+		(*flagPream) = 1;
+	} else {
+		// En este caso llena los 4 bits menos significativos
+		Preambulos[auxPosPream]	=	Preambulo(MoreFrags,strand,lendesc,*flagPream,Preambulos[auxPosPream]);
+		(*flagPream) = 0;
+		auxPosPream++;
+	}
 
-	auxPosInst++;
-	BinInst[auxPosInst] =   Preambulo(MoreFrags,strand,lendesc);
+	/*auxPosInst++;
+	BinInst[auxPosInst] =   Preambulo(MoreFrags,strand,lendesc);*/
 	
     if ( lendesc > 0 ){
 
@@ -231,23 +253,14 @@ void Inst2Bin(  uint8_t *BinInst,  uint32_t *posBInst, char strand, uint8_t More
 			for (uint8_t  u=0; u<lendesc; u++){ //Converting each separated error of the read
 
 				auxPosInst++;
-				printf("%"PRIu16"\n",Offsets[u]);
 				BinInst[auxPosInst] = Offset(Offsets[u], &rest);
-				printf("%"PRIu8"\n",BinInst[auxPosInst]);
 				auxPosInst++;
 
-
-				printf("%c ",Oper[u]);
-				printf("%c ",BaseRead[u]);
-				printf("%c ",BaseRef[u]);
 				if ( (Oper[u] == 's') || (Oper[u] == 'S') || (Oper[u] == 'i') ) {
 					EscalarBases(&BaseRead[u]);
 					EscalarBases(&BaseRef[u]);
 				}
 				BinInst[auxPosInst] = TrdBitInst(u, rest, Oper, BaseRead, BaseRef[u], Offsets, lendesc, strand, &aux_i);
-				printf("%"PRIu8"\n",BinInst[auxPosInst]);
-				int x = getchar();
-
 				u=aux_i;
 
 				// if ((BaseRead[u]>=0)&&(BaseRead[u]<=4)){} // FOR REAL ALIGNERS - BOTH CASES
@@ -275,12 +288,13 @@ void Inst2Bin(  uint8_t *BinInst,  uint32_t *posBInst, char strand, uint8_t More
 		}
     }
 	*posBInst=auxPosInst;
+	*posPream=auxPosPream;
 };
 
-uint8_t Preambulo(uint8_t moreFrags, char strand, uint16_t  lendesc){
+uint8_t Preambulo(uint8_t moreFrags, char strand, uint16_t  lendesc, uint8_t flagPream, uint8_t actual){
 
 	uint8_t mask	=	0x01; 
-	uint8_t aux		=	0x0;
+	uint8_t aux		=	actual;
 
 	if (moreFrags==1) {
 		aux=mask|aux;   aux=aux<<3;
@@ -303,7 +317,17 @@ uint8_t Preambulo(uint8_t moreFrags, char strand, uint16_t  lendesc){
 			if (strand=='R') mask=0x5;//CreateMask8B(3,1)|CreateMask8B(1,1);//0x101;   //Reverse
 			if (strand=='E') mask=0x7; //CreateMask8B(3,3);//0x111;   //rEvErsE complEmEnt
     }*/
-	aux=mask|aux;
+
+	if ( flagPream == 0 ) {
+		// 4 bits mas significativos
+		aux	=	mask | aux;   
+		aux =	aux << 4;
+	} else {
+		// 4 bits menos significativos
+		aux = 	mask|aux;
+	}
+
+	
 	return(aux);
 };
 

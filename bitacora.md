@@ -32,3 +32,11 @@
       2 bits que indican la diferencia entre las bases
 
   EUREKA
+## 22 de Noviembre
+  ### Objetivo: Definir el nuevo preludio
+  - Definición: Si mal no recuerdo, la idea es sacar los preludios del BinInst y ponerlos en su propio
+  arreglo de preludios, en general, por cada 8 bits caben 2 preludios
+  - Defino un arreglo de preludios:
+    - Recordar que un preludio es un conjunto de 4 bits, el primer bit indica si el siguiente read mapea en la misma posición, los siguientes tres bits corresponden a el código del matching.
+    - El arreglo de preludios debe ser de tamaño TotalRead/2, en caso de que el total de reads sea impar,
+    entonces se define dicho tamaño como floor(TotalReads/2)+1

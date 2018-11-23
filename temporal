@@ -22,3 +22,5 @@ printf("%"PRIu64"",TamBinInst);
 
 
 			printf("%"PRIu8",%"PRIu8",%"PRIu8"   ",Oper[i],BaseRead[ii], BaseRef);
+
+int x = getchar();
