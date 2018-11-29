@@ -45,3 +45,14 @@
   ### Objetivo: Comenzar con el paralelismo
   - Planificación ( Distribución de la carga, balanceo de carga dinámica y balanceo de carga estática )
   - En OpenMp está el parámetro schedule
+  _PROXIMAS ACTIVIDADES_
+  1. HACER PRUEBAS DE QUE LAS COSAS CORRAN CORRECTAMENTE (SEMÁNTICA)
+
+  2. Tiempo esperado, de 2 a tres veces mejor 
+  3. Mirar el tema de la distribucion de la carga de trabajo en los reads usando los dos modelos
+  4. Verificar los preludios
+  
+  (Modelo estático: Todos los hilos tienen el mismo número de reads excepto el ultimo)
+  (Modelo dinámico: los hilos pelean por chunks, tema de las condiciones de carrera )
+
+  

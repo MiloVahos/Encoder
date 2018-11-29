@@ -31,6 +31,7 @@
 #include <math.h>
 #include <inttypes.h>
 #include <omp.h>
+#include <sys/time.h>
 
 // DEFINE
 #define NAMES_SIZE 40				// LONGITUD DEL NOMBRE DE LOS ARCHIVOS
@@ -59,6 +60,11 @@ void RadixSort(uint32_t TotalReads, uint32_t *MapPos, uint64_t *Indexes);
 void EscalarBases(uint8_t *Base);
 
 int main() {
+
+	struct timeval t1,t2;
+	double elapsedTime;
+
+	gettimeofday(&t1,NULL);
 
 	// VARIABLES DE PROCESO
 	uint32_t	TotalReads;		// CANTIDAD TOTAL DE READS = B*C
@@ -183,21 +189,37 @@ int main() {
 	flagPream	=	0;
 	uint64_t AuxInd	=	0;
 
-	for ( int index = 0; index < TotalReads; index++ ) {
+	#pragma omp parallel
+	{
+		omp_set_num_threads(1);
+		int id, index, Nthreads, istart, iend;
+		id = omp_get_thread_num();					// ID DEL HILO
+		Nthreads = omp_get_num_threads();			// NÚMERO DE HILOS CORRIENDO
+		istart	=	id*TotalReads/Nthreads;			// I INICIAL PARA CADA HILOS
+		iend	=	(id+1)*TotalReads/Nthreads;		// I FINAL PARA HILO
+        if ( id == Nthreads-1 ) iend = TotalReads;	// I FINAL PARA EL ÚLTIMO HILO
 
-		// Verificar si el siguiente read mapea en la misma posición
-		AuxInd	=	Indexes[index];
-		if ( (index < TotalReads-1) && (MapPos[AuxInd]	==	MapPos[AuxInd+1]) ) MoreFrags	=	1;
-		else MoreFrags	=	0;
-		
-		//Aplicar el inst2bin
-		
-		Inst2Bin(	BinInst, Preambulos,&posBInst,&posPream, strand[AuxInd],MoreFrags,
-					lendesc[AuxInd],Offset[AuxInd],Oper[AuxInd],
-					BaseRead[AuxInd],BaseRef[AuxInd],AuxInd, &flagPream );
-		
-	}
+		for ( int index = istart; index < iend; index++ ) {
 
+			// Verificar si el siguiente read mapea en la misma posición
+			AuxInd	=	Indexes[index];
+			if ( (index < TotalReads-1) && (MapPos[AuxInd]	==	MapPos[AuxInd+1]) ) MoreFrags	=	1;
+			else MoreFrags	=	0;
+			
+			//Aplicar el inst2bin
+			
+			Inst2Bin(	BinInst, Preambulos,&posBInst,&posPream, strand[AuxInd],MoreFrags,
+						lendesc[AuxInd],Offset[AuxInd],Oper[AuxInd],
+						BaseRead[AuxInd],BaseRef[AuxInd],AuxInd, &flagPream );
+			
+		}
+ 
+    }
+
+	gettimeofday(&t2,NULL);
+	elapsedTime	= (t2.tv_sec - t1.tv_sec) * 1000.0;
+	elapsedTime += (t2.tv_usec - t1.tv_usec) * 1000.0;
+	printf("Processing time: %5.3f ms\n",elapsedTime);
 
 	fclose( ALIGN );
 	
@@ -234,12 +256,12 @@ void Inst2Bin(  uint8_t *BinInst, uint8_t *Preambulos, uint32_t *posBInst, uint3
 		// En este caso llena los 4 bits más significativos
 		Preambulos[auxPosPream] = 	0;
 		Preambulos[auxPosPream]	=	Preambulo(MoreFrags,strand,lendesc,*flagPream,Preambulos[auxPosPream]);
-		printf("Preambulos: %"PRIu8", %"PRIu32" \n", Preambulos[auxPosPream],auxPosPream);
+		//printf("Preambulos: %"PRIu8", %"PRIu32" \n", Preambulos[auxPosPream],auxPosPream);
 		(*flagPream) = 1;
 	} else {
 		// En este caso llena los 4 bits menos significativos
 		Preambulos[auxPosPream]	=	Preambulo(MoreFrags,strand,lendesc,*flagPream,Preambulos[auxPosPream]);
-		printf("Preambulos: %"PRIu8", %"PRIu32" \n", Preambulos[auxPosPream],auxPosPream);
+		//printf("Preambulos: %"PRIu8", %"PRIu32" \n", Preambulos[auxPosPream],auxPosPream);
 		(*flagPream) = 0;
 		auxPosPream++;
 	}
@@ -261,7 +283,6 @@ void Inst2Bin(  uint8_t *BinInst, uint8_t *Preambulos, uint32_t *posBInst, uint3
 					EscalarBases(&BaseRead[u]);
 					EscalarBases(&BaseRef[u]);
 				}
-				printf("%c\n",Oper[u]);
 				BinInst[auxPosInst] = TrdBitInst(u, rest, Oper, BaseRead, BaseRef[u], Offsets, lendesc, strand, &aux_i);
 				u=aux_i;
 
@@ -490,13 +511,15 @@ uint8_t BitsBase(uint8_t BRead, uint8_t BRef){
 		if (BRead>BRef){
 			auxInt  =   abs((int)BRead-(int)BRef);
 		}else{
-			if (BRead==BRef) printf(" A Error Grave entre bases iguales Base1 %u Base2 %u \n", BRead,  BRef);
+			if (BRead==BRef) printf("");
+				//printf(" A Error Grave entre bases iguales Base1 %u Base2 %u \n", BRead,  BRef);
 			else{
 				auxInt=((5-(int)BRef)+(int)BRead);
 			}
 		}
 		switch(auxInt){
-			case 0: printf(" B Error Grave entre bases iguales Base1 %u Base2 %u \n", BRead,  BRef);
+			case 0: printf("");
+			//printf(" B Error Grave entre bases iguales Base1 %u Base2 %u \n", BRead,  BRef);
 			break;
 			case 1: aux=0x0;  //Distancia 1
 			break;
@@ -506,7 +529,8 @@ uint8_t BitsBase(uint8_t BRead, uint8_t BRef){
 			break;
 			case 4: aux=0x3;//CreateMask8B(2,2); //Distancia 4 0x11
 			break;
-			default: printf("Error en la conversión circular Base1 %u BAse2 %u \n",  BRead,  BRef);
+			default: printf("");
+			//printf("Error en la conversión circular Base1 %u BAse2 %u \n",  BRead,  BRef);
 		}
 	}
 	return(aux);
