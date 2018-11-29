@@ -6,21 +6,6 @@
  Copyright   : 	All rights reserved to UdeaCompress
  Description :	Encoder algorithm of the UdeaCompress FASTQ compressor
  ============================================================================
- */
-/*	
- ============================================================================
-		FORMATO DEL ARCHIVO DE ALINEAMIENTO
- ============================================================================
-    0. B
-    1. C
-    3. MapPos
-    4. lendesc
-    5. strand
-    6. 0. oper ->SE REPITEN LENDESC VECES
-       1. offset ->SE REPITEN LENDESC VECES
-       2. baseRef ->SE REPITEN LENDESC VECES
-       3. baseRead ->SE REPITEN LENDESC VECES
-
 */
 
 // LIBRERÍAS
@@ -30,7 +15,6 @@
 #include <string.h>
 #include <math.h>
 #include <inttypes.h>
-#include <omp.h>
 #include <sys/time.h>
 
 // DEFINE
@@ -54,16 +38,16 @@ uint8_t BitsOperF(uint8_t *oper, uint8_t *baseRead, uint16_t *offset, int *ii );
 uint8_t Preambulo(uint8_t moreFrags, char strand, uint16_t lendesc, uint8_t flagPream, uint8_t actual);
 uint8_t Offset(uint16_t offset, uint8_t *rest);
 uint8_t BitsBase(uint8_t BRead, uint8_t BRef);
+void EscalarBases(uint8_t *Base);
 
 //**********************************SORTING**********************************************//
 void RadixSort(uint32_t TotalReads, uint32_t *MapPos, uint64_t *Indexes);
-void EscalarBases(uint8_t *Base);
 
 int main() {
 
+	// ESTRUCTURA PARA MEDIR TIEMPO DE EJECUCIÓN
 	struct timeval t1,t2;
 	double elapsedTime;
-
 	gettimeofday(&t1,NULL);
 
 	// VARIABLES DE PROCESO
@@ -72,6 +56,7 @@ int main() {
 	uint32_t	B;				// CANTIDAD BASE DE READS
 	uint8_t		C;				// COVERAGE DE LA CANTIDAD DE READS
 	FILE 		*ALIGN;			// PUNTEROS A LOS ARCHIVOS
+	FILE		*PRUEBAS;		// PUNTERO AL ARCHIVO DE RESULTADOS
 
 	// VARIABLES DE OPERACIÓN
 	uint64_t	*Indexes;		// Índices referentes a los Reads
@@ -116,6 +101,7 @@ int main() {
 		BaseRead        =   (uint8_t**)  malloc(TotalReads*sizeof(uint8_t*));
 		if ( BaseRead == NULL ) printf ("Not enough memory for BaseRead");
 		
+		// OBTENER TODA LA INFORMACIÓN DESDE EL ARCHIVO DE ALINEAMIENTO
 		for ( int i = 0; i < TotalReads; i++ ) {
 
 			fscanf( ALIGN, "%"SCNu32"", &MapPos[i] );
@@ -161,6 +147,7 @@ int main() {
 		}
 		fscanf( ALIGN, "%"SCNu64"",&NTErrors );
 	}
+	fclose (ALIGN);	// SE CIERRA EL ARCHIVO DE ALINEAMIENTO
 
 	// 2. USANDO EL RADIX SORT SE ORDENA EL VECTOR DE ÍNDICES DE ACUERDO CON LA POSICIÓN DE MAPEO
 	// 		- SE CREA EL VECTOR DE ÍNDICES [0 - TotalReads-1]
@@ -189,40 +176,46 @@ int main() {
 	flagPream	=	0;
 	uint64_t AuxInd	=	0;
 
-	#pragma omp parallel
-	{
-		omp_set_num_threads(1);
-		int id, index, Nthreads, istart, iend;
-		id = omp_get_thread_num();					// ID DEL HILO
-		Nthreads = omp_get_num_threads();			// NÚMERO DE HILOS CORRIENDO
-		istart	=	id*TotalReads/Nthreads;			// I INICIAL PARA CADA HILOS
-		iend	=	(id+1)*TotalReads/Nthreads;		// I FINAL PARA HILO
-        if ( id == Nthreads-1 ) iend = TotalReads;	// I FINAL PARA EL ÚLTIMO HILO
+	PRUEBAS	= 	fopen( "ResultadoExperimento.txt", "w" );
+	for ( int index = 0; index < TotalReads; index++ ) {
 
-		for ( int index = istart; index < iend; index++ ) {
+		// Verificar si el siguiente read mapea en la misma posición
+		AuxInd	=	Indexes[index];
+		if ( (index < TotalReads-1) && (MapPos[AuxInd]	==	MapPos[AuxInd+1]) ) MoreFrags	=	1;
+		else MoreFrags	=	0;
+		
+		//Aplicar el inst2bin
+		
+		Inst2Bin(	BinInst, Preambulos,&posBInst,&posPream, strand[AuxInd],MoreFrags,
+					lendesc[AuxInd],Offset[AuxInd],Oper[AuxInd],
+					BaseRead[AuxInd],BaseRef[AuxInd],AuxInd, &flagPream );
 
-			// Verificar si el siguiente read mapea en la misma posición
-			AuxInd	=	Indexes[index];
-			if ( (index < TotalReads-1) && (MapPos[AuxInd]	==	MapPos[AuxInd+1]) ) MoreFrags	=	1;
-			else MoreFrags	=	0;
-			
-			//Aplicar el inst2bin
-			
-			Inst2Bin(	BinInst, Preambulos,&posBInst,&posPream, strand[AuxInd],MoreFrags,
-						lendesc[AuxInd],Offset[AuxInd],Oper[AuxInd],
-						BaseRead[AuxInd],BaseRef[AuxInd],AuxInd, &flagPream );
-			
-		}
- 
-    }
+		if(Offset[AuxInd])		free(Offset[AuxInd]);
+		if(Oper[AuxInd]) 		free(Oper[AuxInd]);		
+		if(BaseRead[AuxInd]) 	free(BaseRead[AuxInd]);		
+		if(BaseRef[AuxInd]) 	free(BaseRef[AuxInd]);		
+		
+	}
 
+	// CIERRE DE ARCHIVOS Y SE LIBERA LA MEMORIA FALTANTE
+	if(MapPos)		free(MapPos);
+	if(strand)		free(strand);
+	if(lendesc)		free(lendesc);
+	if(Offset)		free(Offset);
+	if(Oper)		free(Oper);
+	if(BaseRead)	free(BaseRead);
+	if(BaseRef)		free(BaseRef);
+	if(BinInst) 	free(BinInst);
+	if(Preambulos) 	free(Preambulos);
+	if(Indexes) 	free(Indexes);
+	fclose(PRUEBAS);
+    
+	// SE CALCULA EL TIEMPO TOTAL DE EJECUCIÓN Y SE MUESTRA
 	gettimeofday(&t2,NULL);
 	elapsedTime	= (t2.tv_sec - t1.tv_sec) * 1000.0;
 	elapsedTime += (t2.tv_usec - t1.tv_usec) * 1000.0;
 	printf("Processing time: %5.3f ms\n",elapsedTime);
 
-	fclose( ALIGN );
-	
     return 0;
 
 }
@@ -511,15 +504,15 @@ uint8_t BitsBase(uint8_t BRead, uint8_t BRef){
 		if (BRead>BRef){
 			auxInt  =   abs((int)BRead-(int)BRef);
 		}else{
-			if (BRead==BRef) printf("");
-				//printf(" A Error Grave entre bases iguales Base1 %u Base2 %u \n", BRead,  BRef);
-			else{
+			if (BRead==BRef) {
+				printf(" A Error Grave entre bases iguales Base1 %u Base2 %u \n", BRead,  BRef);
+			} else {
 				auxInt=((5-(int)BRef)+(int)BRead);
 			}
 		}
 		switch(auxInt){
-			case 0: printf("");
-			//printf(" B Error Grave entre bases iguales Base1 %u Base2 %u \n", BRead,  BRef);
+			case 0:
+				printf(" B Error Grave entre bases iguales Base1 %u Base2 %u \n", BRead,  BRef);
 			break;
 			case 1: aux=0x0;  //Distancia 1
 			break;
@@ -529,8 +522,8 @@ uint8_t BitsBase(uint8_t BRead, uint8_t BRef){
 			break;
 			case 4: aux=0x3;//CreateMask8B(2,2); //Distancia 4 0x11
 			break;
-			default: printf("");
-			//printf("Error en la conversión circular Base1 %u BAse2 %u \n",  BRead,  BRef);
+			default:
+				printf("Error en la conversión circular Base1 %u BAse2 %u \n",  BRead,  BRef);
 		}
 	}
 	return(aux);

@@ -55,4 +55,6 @@
   (Modelo estático: Todos los hilos tienen el mismo número de reads excepto el ultimo)
   (Modelo dinámico: los hilos pelean por chunks, tema de las condiciones de carrera )
 
-  
+### 29 de Noviembre
+  ### Objetivo: Extraer y probar la versión secuencial
+  - Antes de comenzar la paralelización, organizo la versión secuencial
