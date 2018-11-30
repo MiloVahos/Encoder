@@ -24,3 +24,32 @@ printf("%"PRIu64"",TamBinInst);
 			printf("%"PRIu8",%"PRIu8",%"PRIu8"   ",Oper[i],BaseRead[ii], BaseRef);
 
 int x = getchar();
+
+
+#include <omp.h>
+#pragma omp parallel
+	{
+		omp_set_num_threads(1);
+		int id, index, Nthreads, istart, iend;
+		id = omp_get_thread_num();					// ID DEL HILO
+		Nthreads = omp_get_num_threads();			// NÚMERO DE HILOS CORRIENDO
+		istart	=	id*TotalReads/Nthreads;			// I INICIAL PARA CADA HILOS
+		iend	=	(id+1)*TotalReads/Nthreads;		// I FINAL PARA HILO
+        if ( id == Nthreads-1 ) iend = TotalReads;	// I FINAL PARA EL ÚLTIMO HILO
+
+		for ( int index = istart; index < iend; index++ ) {
+
+			// Verificar si el siguiente read mapea en la misma posición
+			AuxInd	=	Indexes[index];
+			if ( (index < TotalReads-1) && (MapPos[AuxInd]	==	MapPos[AuxInd+1]) ) MoreFrags	=	1;
+			else MoreFrags	=	0;
+			
+			//Aplicar el inst2bin
+			
+			Inst2Bin(	BinInst, Preambulos,&posBInst,&posPream, strand[AuxInd],MoreFrags,
+						lendesc[AuxInd],Offset[AuxInd],Oper[AuxInd],
+						BaseRead[AuxInd],BaseRef[AuxInd],AuxInd, &flagPream );
+			
+		}
+ 
+}

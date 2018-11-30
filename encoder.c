@@ -162,7 +162,7 @@ int main() {
 	free(AuxMapPos);
 	
 	//		- APLICACIÓN DEL INS2BIN
-	uint64_t TamBinInst	= NTErrors*BYTES_PER_ERROR;
+	uint64_t TamBinInst	= 2*NTErrors*BYTES_PER_ERROR;
 	uint32_t TamPreabulo = floor( TotalReads/2 )+1;
 	BinInst	=   (uint8_t*)  malloc(TamBinInst*sizeof(uint8_t));
 	if ( BinInst == NULL ) printf ("Not enough memory for BinInst");
@@ -211,7 +211,7 @@ int main() {
 	gettimeofday(&t2,NULL);
 	elapsedTime	= (t2.tv_sec - t1.tv_sec) * 1000.0;
 	elapsedTime += (t2.tv_usec - t1.tv_usec) * 1000.0;
-	printf("Processing time: %5.3f ms\n",elapsedTime);
+	printf("Processing time: %lf ms\n",elapsedTime);
 
     return 0;
 
@@ -273,6 +273,7 @@ void Inst2Bin(  uint8_t *BinInst, uint8_t *Preambulos, uint32_t *posBInst, uint3
 					EscalarBases(&BaseRead[u]);
 					EscalarBases(&BaseRef[u]);
 				}
+				printf("PUNTOA %"PRIu32"\n",auxPosInst);fflush(stdout);
 				BinInst[auxPosInst] = TrdBitInst(u, rest, Oper, BaseRead, BaseRef[u], Offsets, lendesc, strand, &aux_i);
 				u=aux_i;
 
@@ -293,6 +294,7 @@ void Inst2Bin(  uint8_t *BinInst, uint8_t *Preambulos, uint32_t *posBInst, uint3
 					EscalarBases(&BaseRead[u]);
 					EscalarBases(&BaseRef[u]);
 				}
+				printf("PUNTOB %"PRIu32"\n",auxPosInst);fflush(stdout);
 				BinInst[auxPosInst]= TrdBitInst(u, rest, Oper, BaseRead, BaseRef[u], Offsets, lendesc, strand,&aux_i);
 
 				u=aux_i;
@@ -387,7 +389,7 @@ uint8_t TrdBitInst( int i, uint8_t  rest, uint8_t  *Oper, uint8_t  *BaseRead,
 
     if ((strand=='R')||(strand=='e')) mask2 =   BitsOperR(Oper, BaseRead, offset, lendesc, &i);
     if ((strand=='F')||(strand=='c')) mask2 =   BitsOperF(Oper, BaseRead, offset,  &i);
-
+	printf("PUNTOC\n");fflush(stdout);
    	if (((strand=='R')||(strand=='e'))&&((i<lendesc-1)&&(Oper[i+1]!='_'))) aux=mask|aux;  
    		else if (((strand=='F')||(strand=='c'))&&(i>0)) aux=mask|aux;
 
@@ -399,7 +401,9 @@ uint8_t TrdBitInst( int i, uint8_t  rest, uint8_t  *Oper, uint8_t  *BaseRead,
 		mask    =   0x00;
 	}else {
 		if ((mask2  !=  0x1)){
+			printf("PUNTOD\n");fflush(stdout);
 			mask    =   BitsBase(BaseRead[ii], BaseRef);
+			printf("PUNTOE\n");fflush(stdout);
 		}else{
 			mask=BaseRead[ii];
 		}
