@@ -56,7 +56,6 @@ int main() {
 	uint32_t	B;				// CANTIDAD BASE DE READS
 	uint8_t		C;				// COVERAGE DE LA CANTIDAD DE READS
 	FILE 		*ALIGN;			// PUNTEROS A LOS ARCHIVOS
-	FILE		*PRUEBAS;		// PUNTERO AL ARCHIVO DE RESULTADOS
 
 	// VARIABLES DE OPERACIÓN
 	uint64_t	*Indexes;		// Índices referentes a los Reads
@@ -176,7 +175,6 @@ int main() {
 	flagPream	=	0;
 	uint64_t AuxInd	=	0;
 
-	PRUEBAS	= 	fopen( "ResultadoExperimento.txt", "w" );
 	for ( int index = 0; index < TotalReads; index++ ) {
 
 		// Verificar si el siguiente read mapea en la misma posición
@@ -208,7 +206,6 @@ int main() {
 	if(BinInst) 	free(BinInst);
 	if(Preambulos) 	free(Preambulos);
 	if(Indexes) 	free(Indexes);
-	fclose(PRUEBAS);
     
 	// SE CALCULA EL TIEMPO TOTAL DE EJECUCIÓN Y SE MUESTRA
 	gettimeofday(&t2,NULL);
@@ -249,12 +246,12 @@ void Inst2Bin(  uint8_t *BinInst, uint8_t *Preambulos, uint32_t *posBInst, uint3
 		// En este caso llena los 4 bits más significativos
 		Preambulos[auxPosPream] = 	0;
 		Preambulos[auxPosPream]	=	Preambulo(MoreFrags,strand,lendesc,*flagPream,Preambulos[auxPosPream]);
-		//printf("Preambulos: %"PRIu8", %"PRIu32" \n", Preambulos[auxPosPream],auxPosPream);
+		// printf("Preambulos: %c , %"PRIu8", %"PRIu32" \n", strand,Preambulos[auxPosPream],auxPosPream);
 		(*flagPream) = 1;
 	} else {
 		// En este caso llena los 4 bits menos significativos
 		Preambulos[auxPosPream]	=	Preambulo(MoreFrags,strand,lendesc,*flagPream,Preambulos[auxPosPream]);
-		//printf("Preambulos: %"PRIu8", %"PRIu32" \n", Preambulos[auxPosPream],auxPosPream);
+		// printf("Preambulos: %c , %"PRIu8", %"PRIu32" \n", strand,Preambulos[auxPosPream],auxPosPream);
 		(*flagPream) = 0;
 		auxPosPream++;
 	}
