@@ -1,7 +1,8 @@
-# PARALELIZACIÓN DEL ENCODER
-## 1. Análisis del código secuencial
+# ENCODER
+***
+## VERSIÓN SECUENCIAL
+***
+## VERSIÓN PARALELA ESTÁTICA
+***
+## VERSION PARALELA DINÁMICA
 
-- Dudas variables
-    1. MoreFrags:
-    2. EdDis
-    3. 
