@@ -66,3 +66,8 @@
 # 2019
 
 ### 10 de Enero
+  ### Objetivo: Retomar el trabajo de grado
+  #### Estrategia:
+    - [x] Organizar el repositorio de github y acomodarlo a la estrategia de desarrollo de git-flow
+    - [] Finalizar de una vez por todas la versión secuencial, garantizando que funciona para las diferentes cantidades de datos posibles.
+    - [] Comenzar a organizar la documentación.
