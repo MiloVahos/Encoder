@@ -68,6 +68,8 @@
 ### 10 de Enero
   ### Objetivo: Retomar el trabajo de grado
   #### Estrategia:
-    - [x] Organizar el repositorio de github y acomodarlo a la estrategia de desarrollo de git-flow
-    - [] Finalizar de una vez por todas la versión secuencial, garantizando que funciona para las diferentes cantidades de datos posibles.
-    - [] Comenzar a organizar la documentación.
+    -[x] Organizar el repositorio de github y acomodarlo a la estrategia de desarrollo de git-flow
+    -[] Finalizar de una vez por todas la versión secuencial, garantizando que funciona para las diferentes cantidades de datos posibles.
+    -[] Comenzar a organizar la documentación.
+  ### Puntos clave:
+    - El nombre del archivo que se va a procesar esta quemado en el fopen, se debe pasar este parámetro por la línea de comandos.

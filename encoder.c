@@ -2,7 +2,7 @@
  ============================================================================
  Name        : 	Encoder.c
  Author      : 	Aníbal Guerra Soler
- Parallel V  :  Juan Camilo Peña Vahos
+ Parallel    :  Juan Camilo Peña Vahos
  Copyright   : 	All rights reserved to UdeaCompress
  Description :	Encoder algorithm of the UdeaCompress FASTQ compressor
  ============================================================================
@@ -18,7 +18,7 @@
 #include <sys/time.h>
 
 // DEFINE
-#define NAMES_SIZE 40				// LONGITUD DEL NOMBRE DE LOS ARCHIVOS
+#define NAMES_SIZE 100				// LONGITUD DEL NOMBRE DE LOS ARCHIVOS
 #define BASE_BITS 8					// MACROS DEL RADIXSORT
 #define BASE (1 << BASE_BITS)
 #define MASK (BASE-1)
@@ -26,7 +26,7 @@
 #define BYTES_PER_ERROR 2			// 1 BYTE PARA EL OFFSET, 1 BYTE PARA LA DESCRIPCIÓN
 
 // FUNCTIONS PROTOTYPES
-//**********************************Coding (Compression)(Inst --> binary coding)*********//
+//*******************Coding (Compression)(Inst --> binary coding)************************************//
 void Inst2Bin(  uint8_t *BinInst, uint8_t *Preambulos, uint32_t *posBInst, uint32_t *posPream,
 				char strand, uint8_t MoreFrags, uint16_t lendesc, uint16_t *Offsets, 
 				uint8_t *Oper, uint8_t *BaseRead, uint8_t *BaseRef, uint64_t i, uint8_t *flagPream );
@@ -40,7 +40,7 @@ uint8_t Offset(uint16_t offset, uint8_t *rest);
 uint8_t BitsBase(uint8_t BRead, uint8_t BRef);
 void EscalarBases(uint8_t *Base);
 
-//**********************************SORTING**********************************************//
+//**********************************************SORTING**********************************************//
 void RadixSort(uint32_t TotalReads, uint32_t *MapPos, uint64_t *Indexes);
 
 int main() {
