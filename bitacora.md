@@ -58,3 +58,11 @@
 ### 29 de Noviembre
   ### Objetivo: Extraer y probar la versión secuencial
   - Antes de comenzar la paralelización, organizo la versión secuencial
+
+
+### RECESO
+  ### MOTIVO: Daño del computador pospuso la actividad
+
+# 2019
+
+### 10 de Enero
