@@ -73,3 +73,9 @@
     -[] Comenzar a organizar la documentación.
   ### Puntos clave:
     - El nombre del archivo que se va a procesar esta quemado en el fopen, se debe pasar este parámetro por la línea de comandos.
+    - Parece que el ARG no generó los 200.000 reads.
+    - Descargue el ARG_ENCODER y volví a generar un archivo de alineamiento, verifiqué que tuviera los 200000 reads, y lo paśe al encoder, en esta ocasión funcionó correctamente. De aquí surge un problema, es probable que bajo ciertas circunstancias la lectura del archivo de alineamiento fracase, hay que verificar dichas circunstancias.
+
+### 14 de Enero
+  ### Puntos clave:
+    - 
