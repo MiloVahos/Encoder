@@ -76,6 +76,12 @@
     - Parece que el ARG no generó los 200.000 reads.
     - Descargue el ARG_ENCODER y volví a generar un archivo de alineamiento, verifiqué que tuviera los 200000 reads, y lo paśe al encoder, en esta ocasión funcionó correctamente. De aquí surge un problema, es probable que bajo ciertas circunstancias la lectura del archivo de alineamiento fracase, hay que verificar dichas circunstancias.
 
-### 14 de Enero
+### 17 de Enero
   ### Puntos clave:
-    - 
+    - Se hacen pruebas de los preambulos en la versión secuencial
+
+### 22 de Enero
+  ### Puntos Clave:
+  ![ESTRUCTURAS](/IMG/ESTRUCTURAS.jpeg)
+  - 
+
