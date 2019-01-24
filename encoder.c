@@ -25,9 +25,9 @@
 #define DIGITS(v, shift) (((v) >> shift) & MASK)
 #define BYTES_PER_ERROR 2			// 1 BYTE PARA EL OFFSET, 1 BYTE PARA LA DESCRIPCIÓN
 #define TEST_PRE	0				// SI TEST_PRE ES 1, SE ACTIVAN LOS ARCHIVOS DE PRUEBA, DE LO CONTRARIO NO
-#define ERROR_LOG	1				// SI ERROR_LOG ES 1, SE ACTIVA LA GENERACIÓN DE LOGS DE 
+#define ERROR_LOG	0				// SI ERROR_LOG ES 1, SE ACTIVA LA GENERACIÓN DE LOGS DE 
 									// ERRORES CONTROLADOS EN LA CODIFICACIÓN
-#define TEST_BINST	1				// SI TEST_BINST ES 1, SE ACTIVAN LOS ARCHIVOS DE PRUEBA DE BinINST
+#define TEST_BINST	0				// SI TEST_BINST ES 1, SE ACTIVAN LOS ARCHIVOS DE PRUEBA DE BinINST
 
 // FUNCTIONS PROTOTYPES
 //*******************Coding (Compression)(Inst --> binary coding)************************************//
@@ -228,6 +228,8 @@ int main() {
 	gettimeofday(&t2,NULL);
 	elapsedTime = (double) (t2.tv_usec - t1.tv_usec) / 1000000 + (double) (t2.tv_sec - t1.tv_sec);
 	printf("Processing time: %lf seg\n",elapsedTime);
+	printf("Número de Reads: %"PRIu32"\n",TotalReads);
+	printf("Número de Errores: %"PRIu64"\n",NTErrors);
 
     return 0;
 

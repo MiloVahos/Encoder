@@ -13,8 +13,8 @@
   - Revisar nuevamente la lectura de los datos desde el archivo de alineamiento
 ## 4 de Noviembre de 2018
   - El error que tenía era que estaba inicializando el puntero dentro del ciclo, entonces se reescribía con cada pasada del ciclo
-  [] No olvidar liberar la memoria
-  [] Aplicar lo del preámbulo
+  [x] No olvidar liberar la memoria
+  [x] Aplicar lo del preámbulo
 ## 6 de Noviembre de 2018
   ### Objetivo: Encontrar porque el BinInst tiene como salida todos sus valores en 0
   - Del preámbulo están saliendo valores
@@ -68,9 +68,9 @@
 ### 10 de Enero
   ### Objetivo: Retomar el trabajo de grado
   #### Estrategia:
-    -[x] Organizar el repositorio de github y acomodarlo a la estrategia de desarrollo de git-flow
-    -[] Finalizar de una vez por todas la versión secuencial, garantizando que funciona para las diferentes cantidades de datos posibles.
-    -[] Comenzar a organizar la documentación.
+  [x] Organizar el repositorio de github y acomodarlo a la estrategia de desarrollo de git-flow
+  [x] Finalizar de una vez por todas la versión secuencial, garantizando que funciona para las diferentes cantidades de datos posibles.
+  [x] Comenzar a organizar la documentación.
   ### Puntos clave:
     - El nombre del archivo que se va a procesar esta quemado en el fopen, se debe pasar este parámetro por la línea de comandos.
     - Parece que el ARG no generó los 200.000 reads.
@@ -83,5 +83,19 @@
 ### 22 de Enero
   ### Puntos Clave:
   ![ESTRUCTURAS](/IMG/ESTRUCTURAS.jpeg)
+  - Se completa la versión secuencial, pendiente de pruebas más rigurosas.
+
+### 23 de Enero
+  ### Objetivo: Cerrar la versión secuencial, generar la versión paralela estática y hacer pruebas iniciales
+  ### Estrategia:
+  [x] Generar los archivos de salida de prueba de la versión secuencial
+  [x] Pasar los archivos a una carpeta de pruebas donde después se van a comparar con los que se generen en las siguientes versiones.
+  [] Pasar al master la versión secuencial, salvar aparte la versión secuencial (respaldo.)
+  [] Generar una versión paralela estática
+  ### Puntos Clave:
+  **PROPUESTA DE GITFLOW**
+  **MASTER** Contendrá la versión secuencial
+  **DEVELOP** Contendrá la versión paralela estática
+  **FEATURE** Contendrá la versión paralela dinámica
   - 
 
