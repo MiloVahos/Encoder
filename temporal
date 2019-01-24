@@ -53,3 +53,20 @@ int x = getchar();
 		}
  
 }
+
+
+// TIME CONTROL
+	elapsedTime	= (t2.tv_sec - t1.tv_sec) * 1000.0;
+	elapsedTime += (t2.tv_usec - t1.tv_usec) * 1000.0;
+
+// Imprimir total reads y NTErrors
+printf("TotalReads = %"PRIu32"\n",TotalReads);
+printf("NTErrors = %"PRIu64"\n",NTErrors);
+
+/*printf("%c ",Oper[i][j]);
+					printf("%"PRIu16" ",Offset[i][j]);
+					printf("%c ",BaseRead[i][j]);
+					printf("%c -",BaseRef[i][j]);*/
+
+
+			// printf("%d - %"PRIu32" - %"PRIu16" - %c \n",i,MapPos[i],lendesc[i],strand[i]);
