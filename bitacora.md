@@ -90,8 +90,8 @@
   ### Estrategia:
   [x] Generar los archivos de salida de prueba de la versión secuencial
   [x] Pasar los archivos a una carpeta de pruebas donde después se van a comparar con los que se generen en las siguientes versiones.
-  [] Pasar al master la versión secuencial, salvar aparte la versión secuencial (respaldo.)
-  [] Generar una versión paralela estática
+  [x] Pasar al master la versión secuencial
+  [x] Generar una versión paralela estática
   ### Puntos Clave:
   **PROPUESTA DE GITFLOW**
   **MASTER** Contendrá la versión secuencial

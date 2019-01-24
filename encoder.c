@@ -16,6 +16,7 @@
 #include <math.h>
 #include <inttypes.h>
 #include <sys/time.h>
+#include <omp.h>
 
 // DEFINE
 #define NAMES_SIZE 100				// LONGITUD DEL NOMBRE DE LOS ARCHIVOS
@@ -187,30 +188,41 @@ int main() {
 	if ( ERROR_LOG == 1 ) ELOGS = fopen( "ELogs.txt", "w" );
 	if ( TEST_BINST == 1 ) BININST = fopen( "BinInst.txt", "w" );
 
-	for ( int index = 0; index < TotalReads; index++ ) {
+	#pragma omp parallel
+	{
+		omp_set_num_threads(1);
+		int id, index, Nthreads, istart, iend;
+		id = omp_get_thread_num();					// ID DEL HILO
+		Nthreads = omp_get_num_threads();			// NÚMERO DE HILOS CORRIENDO
+		istart	=	id*TotalReads/Nthreads;			// I INICIAL PARA CADA HILOS
+		iend	=	(id+1)*TotalReads/Nthreads;		// I FINAL PARA HILO
+        if ( id == Nthreads-1 ) iend = TotalReads;	// I FINAL PARA EL ÚLTIMO HILO
 
-		// Verificar si el siguiente read mapea en la misma posición
-		AuxInd	=	Indexes[index];
-		if ( (index < TotalReads-1) && (MapPos[AuxInd]	==	MapPos[AuxInd+1]) ) MoreFrags	=	1;
-		else MoreFrags	=	0;
-		
-		//Aplicar el inst2bin
-		
-		Inst2Bin(	BinInst, Preambulos,&posBInst,&posPream, strand[AuxInd],MoreFrags,
+		for ( int index = istart; index < iend; index++ ) {
+
+			// Verificar si el siguiente read mapea en la misma posición
+			AuxInd	=	Indexes[index];
+			if ( (index < TotalReads-1) && (MapPos[AuxInd]	==	MapPos[AuxInd+1]) ) MoreFrags	=	1;
+			else MoreFrags	=	0;
+			
+			//Aplicar el inst2bin
+			
+			Inst2Bin(	BinInst, Preambulos,&posBInst,&posPream, strand[AuxInd],MoreFrags,
 					lendesc[AuxInd],Offset[AuxInd],Oper[AuxInd],
 					BaseRead[AuxInd],BaseRef[AuxInd],AuxInd, &flagPream, PREAMBULOS, ELOGS, BININST );
-
-		if(Offset[AuxInd])		free(Offset[AuxInd]);
-		if(Oper[AuxInd]) 		free(Oper[AuxInd]);		
-		if(BaseRead[AuxInd]) 	free(BaseRead[AuxInd]);		
-		if(BaseRef[AuxInd]) 	free(BaseRef[AuxInd]);		
-		
+			
+			if(Offset[AuxInd])		free(Offset[AuxInd]);
+			if(Oper[AuxInd]) 		free(Oper[AuxInd]);		
+			if(BaseRead[AuxInd]) 	free(BaseRead[AuxInd]);		
+			if(BaseRef[AuxInd]) 	free(BaseRef[AuxInd]);	
+			
+		}
+ 
 	}
 
 	if ( TEST_PRE == 1 ) fclose(PREAMBULOS);
 	if ( ERROR_LOG == 1 ) fclose(ELOGS);
 	if ( TEST_BINST == 1 ) fclose(BININST);
-
 
 	// CIERRE DE ARCHIVOS Y SE LIBERA LA MEMORIA FALTANTE
 	if(MapPos)		free(MapPos);
