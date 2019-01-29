@@ -24,10 +24,10 @@
 #define MASK (BASE-1)
 #define DIGITS(v, shift) (((v) >> shift) & MASK)
 #define BYTES_PER_ERROR 2			// 1 BYTE PARA EL OFFSET, 1 BYTE PARA LA DESCRIPCIÓN
-#define TEST_PRE	0				// SI TEST_PRE ES 1, SE ACTIVAN LOS ARCHIVOS DE PRUEBA, DE LO CONTRARIO NO
+#define TEST_PRE	2				// SI TEST_PRE ES 1, SE ACTIVAN LOS ARCHIVOS DE PRUEBA, DE LO CONTRARIO NO
 #define ERROR_LOG	0				// SI ERROR_LOG ES 1, SE ACTIVA LA GENERACIÓN DE LOGS DE 
 									// ERRORES CONTROLADOS EN LA CODIFICACIÓN
-#define TEST_BINST	0				// SI TEST_BINST ES 1, SE ACTIVAN LOS ARCHIVOS DE PRUEBA DE BinINST
+#define TEST_BINST	2				// SI TEST_BINST ES 1, SE ACTIVAN LOS ARCHIVOS DE PRUEBA DE BinINST
 
 // FUNCTIONS PROTOTYPES
 //*******************Coding (Compression)(Inst --> binary coding)************************************//
@@ -183,9 +183,9 @@ int main() {
 	flagPream	=	0;
 	uint64_t AuxInd	=	0;
 
-	if ( TEST_PRE == 1 ) PREAMBULOS	= fopen( "Preambulos.txt" , "w" );
+	if ( TEST_PRE == 1 || TEST_PRE == 2 ) PREAMBULOS	= fopen( "Preambulos.txt" , "w" );
 	if ( ERROR_LOG == 1 ) ELOGS = fopen( "ELogs.txt", "w" );
-	if ( TEST_BINST == 1 ) BININST = fopen( "BinInst.txt", "w" );
+	if ( TEST_BINST == 1 || TEST_BINST == 2 ) BININST = fopen( "BinInst.txt", "w" );
 
 	for ( int index = 0; index < TotalReads; index++ ) {
 
@@ -207,9 +207,21 @@ int main() {
 		
 	}
 
-	if ( TEST_PRE == 1 ) fclose(PREAMBULOS);
+	if ( TEST_PRE == 2 ) {
+		for ( int i = 0; i < TamPreabulo; i++ ) {
+			fprintf(PREAMBULOS,"%"PRIu8"\n", Preambulos[i]);
+		}
+	}
+
+	if ( TEST_BINST == 2 ) {
+		for ( int i = 0; i < TamBinInst; i++ ) {
+			fprintf(BININST,"%"PRIu8"\n", BinInst[i]);
+		}
+	}
+
+	if ( TEST_PRE == 1 || TEST_PRE == 2 ) fclose(PREAMBULOS);
 	if ( ERROR_LOG == 1 ) fclose(ELOGS);
-	if ( TEST_BINST == 1 ) fclose(BININST);
+	if ( TEST_BINST == 1 || TEST_BINST == 2 ) fclose(BININST);
 
 
 	// CIERRE DE ARCHIVOS Y SE LIBERA LA MEMORIA FALTANTE
