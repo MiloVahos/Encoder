@@ -151,6 +151,7 @@ int main() {
 			}
 		}		
 		fscanf( ALIGN, "%"SCNu64"", &NTErrors );
+		printf("Número de Errores: %"PRIu64"\n",NTErrors);
 	}
 	fclose (ALIGN);	// SE CIERRA EL ARCHIVO DE ALINEAMIENTO
 
