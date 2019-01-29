@@ -54,6 +54,13 @@ int x = getchar();
  
 }
 
+		printf("Pos pream thread %d es %"PRIu32"\n",id, posPream);
+
+
+
+
+
+
 
 // TIME CONTROL
 	elapsedTime	= (t2.tv_sec - t1.tv_sec) * 1000.0;

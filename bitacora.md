@@ -98,4 +98,29 @@
   **DEVELOP** Contendrá la versión paralela estática
   **FEATURE** Contendrá la versión paralela dinámica
   - 
+### 24 de Enero
+  ### Objetivo: Aplicar las técnicas de paralelización
+  ### Estrategia:
+  [x] Descomposición en tareas
+  [x] Descripción de tareas
+  [] Asignación
+  [] Correspondencia
+  ### Puntos Clave:
+  #### DESCOMPOSICIÓN:
+  ![DESCOMPOSICIÓN EN TAREAS](/IMG/Descomposicion.jpeg)
+  #### DESCRIPCIÓN:
+  - **TAREA 0:** Es la tarea más crítica pues requiere sincronizar todos los hilos para que operen correctamente sobre la variable **AuxInd**. Todas las tareas importantes dependen del cálculo correcto del índice
+  - **TAREA 1:** Esta tarea es de poca importancia, y no tiene dependencia con el índice auxiliar, en general se trata saber si el siguiente Read mapea en la misma posición que el actual.
+  - **TAREA 2:** Determinar el preámbulo, dado que en un solo byte van a estar agrupados dos preámbulo de diferente read, esta tareá se hace crítica pues en las fronteras entre hilos, es posible que el índice se superponga.
+  - **TAREA 3:** Determinar el BYTE 1 del Ins2Bin depende del índice auxiliar, pero en gran medida es una tarea independiente y fácil de completar pues ocupa el Byte completo
+  - **TAREA 4:** Calcular el BYTE 2 no es tan sencillo, pues requiere que el BYTE 1 ya esté calculado y se tengan los bits sobrantes para calcular agregarlos al BYTE 2, por ello se tiene el mismo problema en las fronteras entre hilos.
+  - **TAREA 5:** Actualizar el índice auxiliar tiene su complicación, pues puede ocurrir que los hilos sobrescriban el índice. Se debe tener copias separadas y que en cierto momento se sincronicen.
 
+### 28 de Enero
+  ### Objetivo: Terminar de aplicar las técnicas de paralelismo
+  ### Puntos clave:
+  - Debo separar totalmente las tareas descritas previamente
+  - Paso el AuxInd y MoreFrags para ser declaradas dentro de la región de paralelización con el objetivo de que sea una variable privada
+  - **TAREA 6:** Añado esta tarea porque también puede ser fuente de error, se trata de liberar la memoria, con esta tarea se debe tener cuidado porque un hilo puede borrar algo que está usando otro hilo 
+  - Corrección del punto anterior, de hecho no es posible que se liberen posiciones de memoria incorrectas porque AuxInd es diferente obligatoriamente
+  - El sistema de impresión que tengo no va a funcionar, debo esperar a tener todo el preambulo y el BinInst e imprimirlos, ya se agregó otro en el que solo se imprimen los vectores verticalmente

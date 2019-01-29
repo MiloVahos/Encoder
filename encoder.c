@@ -25,7 +25,7 @@
 #define MASK (BASE-1)
 #define DIGITS(v, shift) (((v) >> shift) & MASK)
 #define BYTES_PER_ERROR 2			// 1 BYTE PARA EL OFFSET, 1 BYTE PARA LA DESCRIPCIÓN
-#define TEST_PRE	0				// SI TEST_PRE ES 1, SE ACTIVAN LOS ARCHIVOS DE PRUEBA, DE LO CONTRARIO NO
+#define TEST_PRE	2				// SI TEST_PRE ES 1, SE ACTIVAN LOS ARCHIVOS DE PRUEBA, DE LO CONTRARIO NO
 #define ERROR_LOG	0				// SI ERROR_LOG ES 1, SE ACTIVA LA GENERACIÓN DE LOGS DE 
 									// ERRORES CONTROLADOS EN LA CODIFICACIÓN
 #define TEST_BINST	0				// SI TEST_BINST ES 1, SE ACTIVAN LOS ARCHIVOS DE PRUEBA DE BinINST
@@ -69,9 +69,6 @@ int main() {
 	// VARIABLES DE OPERACIÓN
 	uint64_t	*Indexes;		// Índices referentes a los Reads
 	uint32_t	posBInst;		// Índice que controla BinInst
-	uint32_t	posPream;		// Índice de control del arreglo de preámbulos
-	uint8_t		flagPream;		// Bandera que indica cuando se aumenta posPream
-	uint8_t		MoreFrags;		// Indica si el siguiente Read Mapea en la misma posición
 	uint32_t	*MapPos;        // Posición de Matching respecto a la referencia
 	uint16_t  	*lendesc;    	// Cantidad de errores total en el Read
 	char      	*strand;   		// Caractér con el sentido del matching
@@ -179,38 +176,47 @@ int main() {
 	if ( Preambulos == NULL ) printf ("Not enough memory for Preambulos");
 
 	posBInst	=	0;
-	posPream	=	0;
-	MoreFrags	=	0;
-	flagPream	=	0;
-	uint64_t AuxInd	=	0;
+	
 
-	if ( TEST_PRE == 1 ) PREAMBULOS	= fopen( "Preambulos.txt" , "w" );
+	if ( TEST_PRE == 1 || TEST_PRE == 2 ) PREAMBULOS	= fopen( "Preambulos.txt" , "w" );
 	if ( ERROR_LOG == 1 ) ELOGS = fopen( "ELogs.txt", "w" );
-	if ( TEST_BINST == 1 ) BININST = fopen( "BinInst.txt", "w" );
+	if ( TEST_BINST == 1 || TEST_BINST == 2 ) BININST = fopen( "BinInst.txt", "w" );
 
-	#pragma omp parallel
+	#pragma omp parallel num_threads(4)
 	{
-		omp_set_num_threads(1);
 		int id, index, Nthreads, istart, iend;
 		id = omp_get_thread_num();					// ID DEL HILO
 		Nthreads = omp_get_num_threads();			// NÚMERO DE HILOS CORRIENDO
 		istart	=	id*TotalReads/Nthreads;			// I INICIAL PARA CADA HILOS
 		iend	=	(id+1)*TotalReads/Nthreads;		// I FINAL PARA HILO
-        if ( id == Nthreads-1 ) iend = TotalReads;	// I FINAL PARA EL ÚLTIMO HILO
+        // if ( id == Nthreads-1 ) iend = TotalReads;	// I FINAL PARA EL ÚLTIMO HILO
 
+		
+		uint32_t posPream;
+		if ( id == 0 ) {
+			posPream = 0;
+		} else {
+			posPream = ( (TotalReads/2) / Nthreads ) * id;
+		}
+		uint8_t flagPream	=	0;
 		for ( int index = istart; index < iend; index++ ) {
 
 			// Verificar si el siguiente read mapea en la misma posición
-			AuxInd	=	Indexes[index];
-			if ( (index < TotalReads-1) && (MapPos[AuxInd]	==	MapPos[AuxInd+1]) ) MoreFrags	=	1;
+			uint8_t	MoreFrags;
+			uint64_t AuxInd	=	Indexes[index];
+
+			// TAREA 1
+			if ( (index < TotalReads-1) && (MapPos[AuxInd]	==	MapPos[AuxInd+1]) ) MoreFrags =	1;
 			else MoreFrags	=	0;
 			
 			//Aplicar el inst2bin
 			
 			Inst2Bin(	BinInst, Preambulos,&posBInst,&posPream, strand[AuxInd],MoreFrags,
-					lendesc[AuxInd],Offset[AuxInd],Oper[AuxInd],
-					BaseRead[AuxInd],BaseRef[AuxInd],AuxInd, &flagPream, PREAMBULOS, ELOGS, BININST );
+						lendesc[AuxInd],Offset[AuxInd],Oper[AuxInd],
+						BaseRead[AuxInd],BaseRef[AuxInd],AuxInd, &flagPream, PREAMBULOS, 
+						ELOGS, BININST );
 			
+			// TAREA 6
 			if(Offset[AuxInd])		free(Offset[AuxInd]);
 			if(Oper[AuxInd]) 		free(Oper[AuxInd]);		
 			if(BaseRead[AuxInd]) 	free(BaseRead[AuxInd]);		
@@ -219,10 +225,21 @@ int main() {
 		}
  
 	}
+	if ( TEST_PRE == 2 ) {
+		for ( int i = 0; i < TamPreabulo; i++ ) {
+			fprintf(PREAMBULOS,"%"PRIu8"\n", Preambulos[i]);
+		}
+	}
 
-	if ( TEST_PRE == 1 ) fclose(PREAMBULOS);
+	if ( TEST_BINST == 2 ) {
+		for ( int i = 0; i < TamBinInst; i++ ) {
+			fprintf(BININST,"%"PRIu8"\n", BinInst[i]);
+		}
+	}
+
+	if ( TEST_PRE == 1 || TEST_PRE == 2) fclose(PREAMBULOS);
 	if ( ERROR_LOG == 1 ) fclose(ELOGS);
-	if ( TEST_BINST == 1 ) fclose(BININST);
+	if ( TEST_BINST == 1 || TEST_BINST == 2) fclose(BININST);
 
 	// CIERRE DE ARCHIVOS Y SE LIBERA LA MEMORIA FALTANTE
 	if(MapPos)		free(MapPos);
@@ -283,16 +300,17 @@ void Inst2Bin(  uint8_t *BinInst, uint8_t *Preambulos, uint32_t *posBInst, uint3
 		(*flagPream) = 1;
 	} else {
 		// En este caso llena los 4 bits menos significativos
-		Preambulos[auxPosPream]	=	Preambulo(MoreFrags,strand,lendesc,*flagPream,Preambulos[auxPosPream]);
+		Preambulos[auxPosPream]	=	Preambulo(MoreFrags,strand,lendesc,*flagPream,Preambulos[auxPosPream]);		
 		if ( TEST_PRE == 1 ) fprintf(PREAMBULOS,"Strand: %c , Preambulo: %"PRIu8", Position: %"PRIu32" \n", strand,Preambulos[auxPosPream],auxPosPream);
 		(*flagPream) = 0;
 		auxPosPream++;
 	}
 
+
 	/*auxPosInst++;
 	BinInst[auxPosInst] =   Preambulo(MoreFrags,strand,lendesc);*/
 	
-    if ( lendesc > 0 ){
+    /*if ( lendesc > 0 ){
         if ((strand=='r')||(strand=='e')){
 			for (uint8_t  u=0; u<lendesc; u++){ //Converting each separated error of the read
 				auxPosInst++;
@@ -329,7 +347,7 @@ void Inst2Bin(  uint8_t *BinInst, uint8_t *Preambulos, uint32_t *posBInst, uint3
 			}
 		}
     }
-	*posBInst=auxPosInst;
+	*posBInst=auxPosInst;*/
 	*posPream=auxPosPream;
 };
 
@@ -530,6 +548,7 @@ uint8_t BitsBase(uint8_t BRead, uint8_t BRef, FILE *ELOGS){
 			auxInt  =   abs((int)BRead-(int)BRef);
 		}else{
 			if (BRead==BRef) {
+	
 				if ( ERROR_LOG == 1 )  fprintf(ELOGS," A Error Grave entre bases iguales Base1 %"PRIu8" Base2 %"PRIu8" \n", BRead,  BRef);
 			} else {
 				auxInt=((5-(int)BRef)+(int)BRead);
@@ -537,6 +556,7 @@ uint8_t BitsBase(uint8_t BRead, uint8_t BRef, FILE *ELOGS){
 		}
 		switch(auxInt){
 			case 0:
+					
 				if ( ERROR_LOG == 1 )  fprintf(ELOGS," B Error Grave entre bases iguales Base1 %"PRIu8" Base2 %"PRIu8" \n", BRead,  BRef);
 			break;
 			case 1: aux=0x0;  //Distancia 1
@@ -548,6 +568,7 @@ uint8_t BitsBase(uint8_t BRead, uint8_t BRef, FILE *ELOGS){
 			case 4: aux=0x3;//CreateMask8B(2,2); //Distancia 4 0x11
 			break;
 			default:
+	
 				if ( ERROR_LOG == 1 )  fprintf(ELOGS,"Error en la conversión circular Base1 %"PRIu8" Base2 %"PRIu8" \n",  BRead,  BRef);
 		}
 	}
