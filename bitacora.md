@@ -124,3 +124,12 @@
   - **TAREA 6:** Añado esta tarea porque también puede ser fuente de error, se trata de liberar la memoria, con esta tarea se debe tener cuidado porque un hilo puede borrar algo que está usando otro hilo 
   - Corrección del punto anterior, de hecho no es posible que se liberen posiciones de memoria incorrectas porque AuxInd es diferente obligatoriamente
   - El sistema de impresión que tengo no va a funcionar, debo esperar a tener todo el preambulo y el BinInst e imprimirlos, ya se agregó otro en el que solo se imprimen los vectores verticalmente
+
+### 29 de Enero
+  ### Objetivo: Evaluar el archivo que tiene el error
+  - Agregar mostrar en pantallas los límites que toman los hilos ( imprimir istart y iend )
+  - Parametrizar la cntidad de hilos
+  - Todos los lotes sean par, excepto el ultimo
+  ### PROPUESTAS SOLUCION BinINST
+  - Hacer todo local y concatenar memoria
+  - hacer la sumatoria de los lendesc del chunck pasado ( Calculo paralelo de prefijo exclusivo )
