@@ -138,8 +138,9 @@
   ### Objetivo: Hacer el desarrollo planteado en la reunión anterior
   ### Estrategia:
   [x] Parametrizar la cantidad de hilos.
-  [] Al empezar la región paralela,cada hilo muestra en pantalla los límites que toma
-  [] Garantizar que para cada hilo, exceptuando el último, el número de preámbulos que toma sea par.
+  [x] Al empezar la región paralela,cada hilo muestra en pantalla los límites que toma
+  [x] Garantizar que para cada hilo, exceptuando el último, el número de preámbulos que toma sea par.
   [] Probar
   ### Puntos clave:
   - Se implementa la parametrización y se deja por defecto un valor de 4 hilos
+  - 

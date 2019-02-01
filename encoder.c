@@ -201,14 +201,22 @@ int main(int argc, char *argv[] ) {
 
 	#pragma omp parallel num_threads(NThreads)
 	{
-		int id, index, Numthreads, istart, iend;
-		id = omp_get_thread_num();					// ID DEL HILO
+		uint8_t id, Numthreads;
+		uint32_t istart, iend, chuncksize;
 		Numthreads = omp_get_num_threads();			// NÚMERO DE HILOS CORRIENDO
-		istart	=	id*TotalReads/Numthreads;			// I INICIAL PARA CADA HILOS
-		iend	=	(id+1)*TotalReads/Numthreads;		// I FINAL PARA HILO
-        // if ( id == Nthreads-1 ) iend = TotalReads;	// I FINAL PARA EL ÚLTIMO HILO
 
+		chuncksize	=	TotalReads / Numthreads;
+		if ( chuncksize % 2 != 0 ) {	// Si es impar
+			chuncksize = chuncksize + 1;
+		}
+
+		id 		= 	omp_get_thread_num();		// ID DEL HILO
+		istart	=	id*chuncksize;				// I INICIAL PARA CADA HILOS
+		iend	=	(id+1)*chuncksize;			// I FINAL PARA HILO
+		if ( id == Numthreads - 1 ) iend = TotalReads;
 		
+		printf("Hilo: %d, Start: %d, End: %d\n", id,istart,iend );
+
 		uint32_t posPream;
 		if ( id == 0 ) {
 			posPream = 0;
