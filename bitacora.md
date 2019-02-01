@@ -5,16 +5,16 @@
   debo usar como Edis, y los archivos de salida que usaba Anibal como prueba.
 ## 1 de Noviembre de 2018
   - Tratar de poner a funcionar una versión secuencial
-  [x] Hacer una copia de mappos, pasar dicha copia al radixsort y luego liberarla
+  - [x] Hacer una copia de mappos, pasar dicha copia al radixsort y luego liberarla
   - Hacer un punto de control cuando se tenga una versión secuencial
-  [x] En el archivo de alineamiento especial para el encoder debo agregar la suma total de errores que generó el ARG
+  - [x] En el archivo de alineamiento especial para el encoder debo agregar la suma total de errores que generó el ARG
   - Organizar el repositorio del ARG
   - Error Grave entre bases iguales Base1 0 Base2 0: Le debo prestar atención cuando la operacion sea s o S o i.
   - Revisar nuevamente la lectura de los datos desde el archivo de alineamiento
 ## 4 de Noviembre de 2018
   - El error que tenía era que estaba inicializando el puntero dentro del ciclo, entonces se reescribía con cada pasada del ciclo
-  [x] No olvidar liberar la memoria
-  [x] Aplicar lo del preámbulo
+  - [x] No olvidar liberar la memoria
+  - [x] Aplicar lo del preámbulo
 ## 6 de Noviembre de 2018
   ### Objetivo: Encontrar porque el BinInst tiene como salida todos sus valores en 0
   - Del preámbulo están saliendo valores
@@ -68,9 +68,9 @@
 ### 10 de Enero
   ### Objetivo: Retomar el trabajo de grado
   #### Estrategia:
-  [x] Organizar el repositorio de github y acomodarlo a la estrategia de desarrollo de git-flow
-  [x] Finalizar de una vez por todas la versión secuencial, garantizando que funciona para las diferentes cantidades de datos posibles.
-  [x] Comenzar a organizar la documentación.
+  - [x] Organizar el repositorio de github y acomodarlo a la estrategia de desarrollo de git-flow
+  - [x] Finalizar de una vez por todas la versión secuencial, garantizando que funciona para las diferentes cantidades de datos posibles.
+  - [x] Comenzar a organizar la documentación.
   ### Puntos clave:
     - El nombre del archivo que se va a procesar esta quemado en el fopen, se debe pasar este parámetro por la línea de comandos.
     - Parece que el ARG no generó los 200.000 reads.
@@ -88,10 +88,10 @@
 ### 23 de Enero
   ### Objetivo: Cerrar la versión secuencial, generar la versión paralela estática y hacer pruebas iniciales
   ### Estrategia:
-  [x] Generar los archivos de salida de prueba de la versión secuencial
-  [x] Pasar los archivos a una carpeta de pruebas donde después se van a comparar con los que se generen en las siguientes versiones.
-  [x] Pasar al master la versión secuencial
-  [x] Generar una versión paralela estática
+  - [x] Generar los archivos de salida de prueba de la versión secuencial
+  - [x] Pasar los archivos a una carpeta de pruebas donde después se van a comparar con los que se generen en las siguientes versiones.
+  - [x] Pasar al master la versión secuencial
+  - [x] Generar una versión paralela estática
   ### Puntos Clave:
   **PROPUESTA DE GITFLOW**
   **MASTER** Contendrá la versión secuencial
@@ -101,10 +101,10 @@
 ### 24 de Enero
   ### Objetivo: Aplicar las técnicas de paralelización
   ### Estrategia:
-  [x] Descomposición en tareas
-  [x] Descripción de tareas
-  [] Asignación
-  [] Correspondencia
+  - [x] Descomposición en tareas
+  - [x] Descripción de tareas
+  - [x] Asignación
+  - [x] Correspondencia
   ### Puntos Clave:
   #### DESCOMPOSICIÓN:
   ![DESCOMPOSICIÓN EN TAREAS](/IMG/Descomposicion.jpeg)
@@ -137,10 +137,19 @@
 ### 31 de Enero
   ### Objetivo: Hacer el desarrollo planteado en la reunión anterior
   ### Estrategia:
-  [x] Parametrizar la cantidad de hilos.
-  [x] Al empezar la región paralela,cada hilo muestra en pantalla los límites que toma
-  [x] Garantizar que para cada hilo, exceptuando el último, el número de preámbulos que toma sea par.
-  [] Probar
+  - [X] Parametrizar la cantidad de hilos.
+  - [X] Al empezar la región paralela,cada hilo muestra en pantalla los límites que toma
+  - [X] Garantizar que para cada hilo, exceptuando el último, el número de preámbulos que toma sea par.
+  - [X] Probar
   ### Puntos clave:
   - Se implementa la parametrización y se deja por defecto un valor de 4 hilos
   - 
+
+### 1 de Febrero
+  ### Objetivo: Poner en funcionamiento el BinInst para la versión estática
+  ### Estrategias:
+  - [] Generar un prefix sum paralelo del vector de errores ( Lendesc )
+  - [] Evaluar en que puntos cada uno de los hilos debe leer el arreglo anterior
+  - [] Cada hilo comenzará a llenar entonces el BinInst desde la posición anterior.
+  ### Puntos Clave:
+  - Revisar con números raros el tema de los límites

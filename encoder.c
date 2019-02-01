@@ -45,6 +45,7 @@ uint8_t Preambulo(uint8_t moreFrags, char strand, uint16_t lendesc, uint8_t flag
 uint8_t Offset(uint16_t offset, uint8_t *rest);
 uint8_t BitsBase(uint8_t BRead, uint8_t BRef, FILE *ELOGS);
 void EscalarBases(uint8_t *Base);
+void prefix_sum( uint16_t *lendesc, uint32_t *prefixLendesc , uint32_t TotalReads);
 
 //**********************************************SORTING**********************************************//
 void RadixSort(uint32_t TotalReads, uint32_t *MapPos, uint64_t *Indexes);
@@ -74,6 +75,7 @@ int main(int argc, char *argv[] ) {
 	uint32_t	posBInst;		// Índice que controla BinInst
 	uint32_t	*MapPos;        // Posición de Matching respecto a la referencia
 	uint16_t  	*lendesc;    	// Cantidad de errores total en el Read
+	uint32_t  	*prefixLendesc; // Sumatoria de prefijo exclusivo de lendesc
 	char      	*strand;   		// Caractér con el sentido del matching
 	uint8_t   	**Oper;			// Arreglo con la operación por error
 	uint16_t  	**Offset;   	// Arreglo de offsets por cada error
@@ -91,8 +93,6 @@ int main(int argc, char *argv[] ) {
 				NThreads	=	(int) atoi (argv[i+1]);
 			}
 		}
-	} else {
-
 	}
 
 	// 1. OBTENER LOS DATOS QUE PROVIENEN DEL ARG
@@ -108,6 +108,8 @@ int main(int argc, char *argv[] ) {
 		if ( MapPos == NULL ) printf ("Not enough memory for MapPos");
 		lendesc        =   (uint16_t*)  malloc(TotalReads*sizeof(uint16_t));
 		if ( lendesc == NULL ) printf ("Not enough memory for lendesc");
+		prefixLendesc  =   (uint32_t*)  malloc(TotalReads*sizeof(uint32_t));
+		if ( prefixLendesc == NULL ) printf ("Not enough memory for prefixLendesc");
 		strand        =   (char*)  malloc(TotalReads*sizeof(char));
 		if ( strand == NULL ) printf ("Not enough memory for strand");
 		// ARREGLOS DE ARREGLOS
@@ -192,12 +194,17 @@ int main(int argc, char *argv[] ) {
 
 	posBInst	=	0;
 	
-
 	if ( TEST_PRE == 1 || TEST_PRE == 2 ) PREAMBULOS	= fopen( "Preambulos.txt" , "w" );
 	if ( ERROR_LOG == 1 ) ELOGS = fopen( "ELogs.txt", "w" );
 	if ( TEST_BINST == 1 || TEST_BINST == 2 ) BININST = fopen( "BinInst.txt", "w" );
 
 	printf("NTHREADS %d\n", NThreads);
+
+	prefixLendesc[0] = 0;
+	#pragma omp parallel num_threads(NThreads)
+	{
+		prefix_sum(lendesc,prefixLendesc,TotalReads);
+	}
 
 	#pragma omp parallel num_threads(NThreads)
 	{
@@ -225,6 +232,8 @@ int main(int argc, char *argv[] ) {
 		}
 		uint8_t flagPream	=	0;
 		for ( int index = istart; index < iend; index++ ) {
+
+			
 
 			// Verificar si el siguiente read mapea en la misma posición
 			uint8_t	MoreFrags;
@@ -559,7 +568,6 @@ uint8_t BitsOperR(uint8_t *oper, uint8_t *baseRead, uint16_t *offset, uint16_t l
 	*ii =   i;
 	return (aux);
 };
-
 uint8_t BitsBase(uint8_t BRead, uint8_t BRef, FILE *ELOGS){
 	
     //calcula la distancia entre la base de la referencia y la base del Read
@@ -687,4 +695,25 @@ void EscalarBases(uint8_t *Base) {
 			*Base = 4;
 		break;
 	}
+}
+
+void prefix_sum( uint16_t *lendesc, uint32_t *prefixLendesc , uint32_t TotalReads) {
+
+	#pragma omp parallel num_threads(n) private(i)
+	for( int i = 2; i <= TotalReads; i*=2) {
+		if ( (omp_get_thread_num() % i) == (i - 1) ) {
+			prefixLendesc[omp_get_thread_num()] += lendesc[omp_get_thread_num() - i/2];
+		}
+		#pragma omp barrier
+	}
+
+	for(int i = i/2; i > 1; i /= 2) {
+		if ((omp_get_thread_num() % i) == (i/2 - 1)) {
+			if (!(omp_get_thread_num() < (i/2 - 1))) {
+				prefixLendesc[omp_get_thread_num()] += prefixLendesc[omp_get_thread_num() - i/2];
+			}
+		}
+		#pragma omp barrier
+	}
+
 }
