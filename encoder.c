@@ -25,7 +25,7 @@
 #define MASK (BASE-1)
 #define DIGITS(v, shift) (((v) >> shift) & MASK)
 #define BYTES_PER_ERROR 2			// 1 BYTE PARA EL OFFSET, 1 BYTE PARA LA DESCRIPCIÓN
-#define TEST_PRE	2				// SI TEST_PRE ES 1, SE ACTIVAN LOS ARCHIVOS DE PRUEBA, DE LO CONTRARIO NO
+#define TEST_PRE	0				// SI TEST_PRE ES 1, SE ACTIVAN LOS ARCHIVOS DE PRUEBA, DE LO CONTRARIO NO
 #define ERROR_LOG	0				// SI ERROR_LOG ES 1, SE ACTIVA LA GENERACIÓN DE LOGS DE 
 									// ERRORES CONTROLADOS EN LA CODIFICACIÓN
 #define TEST_BINST	0				// SI TEST_BINST ES 1, SE ACTIVAN LOS ARCHIVOS DE PRUEBA DE BinINST
@@ -49,12 +49,15 @@ void EscalarBases(uint8_t *Base);
 //**********************************************SORTING**********************************************//
 void RadixSort(uint32_t TotalReads, uint32_t *MapPos, uint64_t *Indexes);
 
-int main() {
+int main(int argc, char *argv[] ) {
 
 	// ESTRUCTURA PARA MEDIR TIEMPO DE EJECUCIÓN
 	struct timeval t1,t2;
 	double elapsedTime;
 	gettimeofday(&t1,NULL);
+
+	// ARGUMENTOS DE ENTRADA
+	int 		NThreads = 4;	// NÚMERO DE HILOS POR DEFECTO 4
 
 	// VARIABLES DE PROCESO
 	uint32_t	TotalReads;		// CANTIDAD TOTAL DE READS = B*C
@@ -80,6 +83,17 @@ int main() {
 	// VARIABLES DE SALID DEL Inst2Bin
 	uint8_t		*BinInst;		// Arreglo de salida del Inst2Bin
 	uint8_t		*Preambulos;	// Arreglo de salida con los preámbulos
+
+	// LEER LOS PARÁMETROS DE ENTRADA
+	if ( argc > 1 ) {
+		for ( int i = 1; i < argc; i++ ) {
+			if ( strcmp(argv[i], "-N" ) == 0 ) {
+				NThreads	=	(int) atoi (argv[i+1]);
+			}
+		}
+	} else {
+
+	}
 
 	// 1. OBTENER LOS DATOS QUE PROVIENEN DEL ARG
 	ALIGN	= 	fopen( "GRCh38.align" , "r" );
@@ -183,13 +197,15 @@ int main() {
 	if ( ERROR_LOG == 1 ) ELOGS = fopen( "ELogs.txt", "w" );
 	if ( TEST_BINST == 1 || TEST_BINST == 2 ) BININST = fopen( "BinInst.txt", "w" );
 
-	#pragma omp parallel num_threads(4)
+	printf("NTHREADS %d\n", NThreads);
+
+	#pragma omp parallel num_threads(NThreads)
 	{
-		int id, index, Nthreads, istart, iend;
+		int id, index, Numthreads, istart, iend;
 		id = omp_get_thread_num();					// ID DEL HILO
-		Nthreads = omp_get_num_threads();			// NÚMERO DE HILOS CORRIENDO
-		istart	=	id*TotalReads/Nthreads;			// I INICIAL PARA CADA HILOS
-		iend	=	(id+1)*TotalReads/Nthreads;		// I FINAL PARA HILO
+		Numthreads = omp_get_num_threads();			// NÚMERO DE HILOS CORRIENDO
+		istart	=	id*TotalReads/Numthreads;			// I INICIAL PARA CADA HILOS
+		iend	=	(id+1)*TotalReads/Numthreads;		// I FINAL PARA HILO
         // if ( id == Nthreads-1 ) iend = TotalReads;	// I FINAL PARA EL ÚLTIMO HILO
 
 		
@@ -197,7 +213,7 @@ int main() {
 		if ( id == 0 ) {
 			posPream = 0;
 		} else {
-			posPream = ( (TotalReads/2) / Nthreads ) * id;
+			posPream = ( (TotalReads/2) / Numthreads ) * id;
 		}
 		uint8_t flagPream	=	0;
 		for ( int index = istart; index < iend; index++ ) {

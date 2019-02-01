@@ -133,3 +133,13 @@
   ### PROPUESTAS SOLUCION BinINST
   - Hacer todo local y concatenar memoria
   - hacer la sumatoria de los lendesc del chunck pasado ( Calculo paralelo de prefijo exclusivo )
+
+### 31 de Enero
+  ### Objetivo: Hacer el desarrollo planteado en la reunión anterior
+  ### Estrategia:
+  [x] Parametrizar la cantidad de hilos.
+  [] Al empezar la región paralela,cada hilo muestra en pantalla los límites que toma
+  [] Garantizar que para cada hilo, exceptuando el último, el número de preámbulos que toma sea par.
+  [] Probar
+  ### Puntos clave:
+  - Se implementa la parametrización y se deja por defecto un valor de 4 hilos
