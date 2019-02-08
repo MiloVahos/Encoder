@@ -25,7 +25,7 @@
 #define MASK (BASE-1)
 #define DIGITS(v, shift) (((v) >> shift) & MASK)
 #define BYTES_PER_ERROR 2			// 1 BYTE PARA EL OFFSET, 1 BYTE PARA LA DESCRIPCIÓN
-#define TEST_PRE	2				// SI TEST_PRE ES 1, SE ACTIVAN LOS ARCHIVOS DE PRUEBA, DE LO CONTRARIO NO
+#define TEST_PRE	0				// SI TEST_PRE ES 1, SE ACTIVAN LOS ARCHIVOS DE PRUEBA, DE LO CONTRARIO NO
 #define ERROR_LOG	0				// SI ERROR_LOG ES 1, SE ACTIVA LA GENERACIÓN DE LOGS DE 
 									// ERRORES CONTROLADOS EN LA CODIFICACIÓN
 #define TEST_BINST	0				// SI TEST_BINST ES 1, SE ACTIVAN LOS ARCHIVOS DE PRUEBA DE BinINST
@@ -52,10 +52,7 @@ void RadixSort(uint32_t TotalReads, uint32_t *MapPos, uint64_t *Indexes);
 
 int main(int argc, char *argv[] ) {
 
-	// ESTRUCTURA PARA MEDIR TIEMPO DE EJECUCIÓN
-	struct timeval t1,t2;
-	double elapsedTime;
-	gettimeofday(&t1,NULL);
+	
 
 	// ARGUMENTOS DE ENTRADA
 	int 		NThreads = 4;	// NÚMERO DE HILOS POR DEFECTO 4
@@ -171,6 +168,8 @@ int main(int argc, char *argv[] ) {
 	}
 	fclose (ALIGN);	// SE CIERRA EL ARCHIVO DE ALINEAMIENTO
 
+	
+
 	// 2. USANDO EL RADIX SORT SE ORDENA EL VECTOR DE ÍNDICES DE ACUERDO CON LA POSICIÓN DE MAPEO
 	// 		- SE CREA EL VECTOR DE ÍNDICES [0 - TotalReads-1]
 	Indexes	=   (uint64_t*)  malloc(TotalReads*sizeof(uint64_t));
@@ -201,7 +200,16 @@ int main(int argc, char *argv[] ) {
 	printf("NTHREADS %d\n", NThreads);
 
 	// Calcular el arreglo de prefijos exclusivos
-	prefix_sum(lendesc,prefixLendesc,TotalReads, NThreads);
+	// prefix_sum(lendesc,prefixLendesc,TotalReads, NThreads);
+
+	/*for ( int i = 0; i < TotalReads; i++ ) {
+		if( TEST_PRE == 2 ) fprintf(PREAMBULOS, "Lendesc: %"PRIu16" - prefix: %"PRIu32"\n",lendesc[i], prefixLendesc[i]);
+	}*/
+
+	// ESTRUCTURA PARA MEDIR TIEMPO DE EJECUCIÓN
+	struct timeval t1,t2;
+	double elapsedTime;
+	gettimeofday(&t1,NULL);
 
 	#pragma omp parallel num_threads(NThreads)
 	{
@@ -230,8 +238,6 @@ int main(int argc, char *argv[] ) {
 		uint8_t flagPream	=	0;
 		for ( int index = istart; index < iend; index++ ) {
 
-			
-
 			// Verificar si el siguiente read mapea en la misma posición
 			uint8_t	MoreFrags;
 			uint64_t AuxInd	=	Indexes[index];
@@ -256,6 +262,14 @@ int main(int argc, char *argv[] ) {
 		}
  
 	}
+
+	// SE CALCULA EL TIEMPO TOTAL DE EJECUCIÓN Y SE MUESTRA
+	gettimeofday(&t2,NULL);
+	elapsedTime = (double) (t2.tv_usec - t1.tv_usec) / 1000000 + (double) (t2.tv_sec - t1.tv_sec);
+	printf("Processing time: %lf seg\n",elapsedTime);
+	printf("Número de Reads: %"PRIu32"\n",TotalReads);
+	printf("Número de Errores: %"PRIu64"\n",NTErrors);
+
 	if ( TEST_PRE == 2 ) {
 		for ( int i = 0; i < TamPreabulo; i++ ) {
 			fprintf(PREAMBULOS,"%"PRIu8"\n", Preambulos[i]);
@@ -284,12 +298,7 @@ int main(int argc, char *argv[] ) {
 	if(Preambulos) 	free(Preambulos);
 	if(Indexes) 	free(Indexes);
     
-	// SE CALCULA EL TIEMPO TOTAL DE EJECUCIÓN Y SE MUESTRA
-	gettimeofday(&t2,NULL);
-	elapsedTime = (double) (t2.tv_usec - t1.tv_usec) / 1000000 + (double) (t2.tv_sec - t1.tv_sec);
-	printf("Processing time: %lf seg\n",elapsedTime);
-	printf("Número de Reads: %"PRIu32"\n",TotalReads);
-	printf("Número de Errores: %"PRIu64"\n",NTErrors);
+	
 
     return 0;
 
