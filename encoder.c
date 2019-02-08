@@ -25,7 +25,7 @@
 #define MASK (BASE-1)
 #define DIGITS(v, shift) (((v) >> shift) & MASK)
 #define BYTES_PER_ERROR 2			// 1 BYTE PARA EL OFFSET, 1 BYTE PARA LA DESCRIPCIÓN
-#define TEST_PRE	0				// SI TEST_PRE ES 1, SE ACTIVAN LOS ARCHIVOS DE PRUEBA, DE LO CONTRARIO NO
+#define TEST_PRE	2				// SI TEST_PRE ES 1, SE ACTIVAN LOS ARCHIVOS DE PRUEBA, DE LO CONTRARIO NO
 #define ERROR_LOG	0				// SI ERROR_LOG ES 1, SE ACTIVA LA GENERACIÓN DE LOGS DE 
 									// ERRORES CONTROLADOS EN LA CODIFICACIÓN
 #define TEST_BINST	0				// SI TEST_BINST ES 1, SE ACTIVAN LOS ARCHIVOS DE PRUEBA DE BinINST
@@ -45,7 +45,7 @@ uint8_t Preambulo(uint8_t moreFrags, char strand, uint16_t lendesc, uint8_t flag
 uint8_t Offset(uint16_t offset, uint8_t *rest);
 uint8_t BitsBase(uint8_t BRead, uint8_t BRef, FILE *ELOGS);
 void EscalarBases(uint8_t *Base);
-void prefix_sum( uint16_t *lendesc, uint32_t *prefixLendesc , uint32_t TotalReads);
+void prefix_sum( uint16_t *lendesc, uint32_t *prefixLendesc , uint32_t TotalReads, int NThreads);
 
 //**********************************************SORTING**********************************************//
 void RadixSort(uint32_t TotalReads, uint32_t *MapPos, uint64_t *Indexes);
@@ -200,11 +200,8 @@ int main(int argc, char *argv[] ) {
 
 	printf("NTHREADS %d\n", NThreads);
 
-	prefixLendesc[0] = 0;
-	#pragma omp parallel num_threads(NThreads)
-	{
-		prefix_sum(lendesc,prefixLendesc,TotalReads);
-	}
+	// Calcular el arreglo de prefijos exclusivos
+	prefix_sum(lendesc,prefixLendesc,TotalReads, NThreads);
 
 	#pragma omp parallel num_threads(NThreads)
 	{
@@ -697,23 +694,41 @@ void EscalarBases(uint8_t *Base) {
 	}
 }
 
-void prefix_sum( uint16_t *lendesc, uint32_t *prefixLendesc , uint32_t TotalReads) {
+void prefix_sum( uint16_t *lendesc, uint32_t *prefixLendesc , uint32_t TotalReads, int NThreads) {
 
-	#pragma omp parallel num_threads(n) private(i)
-	for( int i = 2; i <= TotalReads; i*=2) {
-		if ( (omp_get_thread_num() % i) == (i - 1) ) {
-			prefixLendesc[omp_get_thread_num()] += lendesc[omp_get_thread_num() - i/2];
-		}
-		#pragma omp barrier
-	}
+	uint32_t nthr, *z;
+	uint32_t *x = prefixLendesc;
 
-	for(int i = i/2; i > 1; i /= 2) {
-		if ((omp_get_thread_num() % i) == (i/2 - 1)) {
-			if (!(omp_get_thread_num() < (i/2 - 1))) {
-				prefixLendesc[omp_get_thread_num()] += prefixLendesc[omp_get_thread_num() - i/2];
-			}
-		}
-		#pragma omp barrier
-	}
+  	#pragma omp parallel num_threads(NThreads)
+  	{
+    	int i;
+    	#pragma omp single
+    	{
+      		nthr = omp_get_num_threads();
+      		z = malloc(sizeof(uint32_t)*nthr+1);
+      		z[0] = 0;
+    	}
 
+    	int tid = omp_get_thread_num();
+    	uint32_t sum = 0;
+
+    	#pragma omp for schedule(static) 
+    		for(i=0; i< TotalReads; i++) {
+      			sum += lendesc[i];
+      			x[i] = sum;
+    		}
+    	z[tid+1] = sum;
+    	#pragma omp barrier
+
+    	int offset = 0;
+    	for(i=0; i<(tid+1); i++) {
+        	offset += z[i];
+    	}
+
+    	#pragma omp for schedule(static)
+    	for(i=0; i< TotalReads; i++) {
+      		x[i] += offset;
+    	}
+  	}
+  	free(z);
 }
