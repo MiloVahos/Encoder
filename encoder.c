@@ -612,10 +612,10 @@ uint8_t BitsBase(uint8_t BRead, uint8_t BRef, FILE *ELOGS){
 			case 4: aux=0x3;//CreateMask8B(2,2); //Distancia 4 0x11
 			break;
 			default:
-	
-				#if ERROR_LOG  
+				
+				if ( ERROR_LOG == 1 ) {
 					fprintf(ELOGS,"Error en la conversión circular Base1 %"PRIu8" Base2 %"PRIu8" \n",  BRead,  BRef);
-				#endif
+				}
 		}
 	}
 	return(aux);
