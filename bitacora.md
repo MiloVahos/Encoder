@@ -153,3 +153,15 @@
   - [] Cada hilo comenzará a llenar entonces el BinInst desde la posición anterior.
   ### Puntos Clave:
   - Revisar con números raros el tema de los límites
+
+### 11 de Febrero
+  ### Objetivo: Completar el prefixsum paralelo
+  -> FALLO
+
+### 13 de Febrero
+  ### Objetivo: Paralelizar la generación del BinInst
+  ### Enfoque 1
+  Asumiendo que se soluciona el tema del prefix sum, cada uno de los hilos tiene la información de desde que punto debe escribir en el arreglo, solo consultando en el prefixLendesc cuantos errores existen antes que él
+  y luego comenzando escribir en la posición siguiente
+  ### Enfoque 2:
+  Asumiendo que el prefix lendesc consume mucho tiempo, lo mejor es que cada uno de los hilos defina un subarrelo con su propio BinInst y que al final una ambos, para ello se puede usar realloc para ir variando dinamicamente los arreglos
