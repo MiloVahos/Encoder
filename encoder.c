@@ -25,10 +25,10 @@
 #define MASK (BASE-1)
 #define DIGITS(v, shift) (((v) >> shift) & MASK)
 #define BYTES_PER_ERROR 2			// 1 BYTE PARA EL OFFSET, 1 BYTE PARA LA DESCRIPCIÓN
-#define TEST_PRE	0				// SI TEST_PRE ES 1, SE ACTIVAN LOS ARCHIVOS DE PRUEBA, DE LO CONTRARIO NO
+#define TEST_PRE	1				// SI TEST_PRE ES 1, SE ACTIVAN LOS ARCHIVOS DE PRUEBA, DE LO CONTRARIO NO
 #define ERROR_LOG	0				// SI ERROR_LOG ES 1, SE ACTIVA LA GENERACIÓN DE LOGS DE 
 									// ERRORES CONTROLADOS EN LA CODIFICACIÓN
-#define TEST_BINST	0				// SI TEST_BINST ES 1, SE ACTIVAN LOS ARCHIVOS DE PRUEBA DE BinINST
+#define TEST_BINST	1				// SI TEST_BINST ES 1, SE ACTIVAN LOS ARCHIVOS DE PRUEBA DE BinINST
 
 // FUNCTIONS PROTOTYPES
 //*******************Coding (Compression)(Inst --> binary coding)************************************//
@@ -67,7 +67,6 @@ int main(int argc, char *argv[] ) {
 
 	// VARIABLES DE OPERACIÓN
 	uint64_t	*Indexes;		// Índices referentes a los Reads
-	uint32_t	posBInst;		// Índice que controla BinInst
 	uint32_t	*MapPos;        // Posición de Matching respecto a la referencia
 	uint16_t  	*lendesc;    	// Cantidad de errores total en el Read
 	uint32_t  	*prefixLendesc; // Sumatoria de prefijo exclusivo de lendesc
@@ -187,8 +186,6 @@ int main(int argc, char *argv[] ) {
 	Preambulos	=	(uint8_t*) malloc (TamPreabulo*sizeof(uint8_t));
 	if ( Preambulos == NULL ) printf ("Not enough memory for Preambulos");
 
-	posBInst	=	0;
-
 	#if TEST_PRE  		
 		PREAMBULOS = fopen( "Preambulos.txt" , "w" ); 	
 	#endif
@@ -202,6 +199,7 @@ int main(int argc, char *argv[] ) {
 	printf("NTHREADS %d\n", NThreads);
 
 	// Calcular el arreglo de prefijos exclusivos
+	// Se debe trabajar en la paralelización de esto
 	prefix_sum(lendesc,prefixLendesc,TotalReads, NThreads);
 
 	// ESTRUCTURA PARA MEDIR TIEMPO DE EJECUCIÓN
@@ -211,6 +209,12 @@ int main(int argc, char *argv[] ) {
 
 	#pragma omp parallel num_threads(NThreads)
 	{
+		/**
+		 * En esta implementación, se ha calculado el vector de prefijo inclusivo o exclusivo del vector
+		 * lendesc, a partir de este vector cada hilo puede saber cuantos errores ocurrieron antes 
+		 * de la porción de reads que el maneja, siendo así, tiene la información desde donde debe llenar
+		 * el vector BinInst
+		*/
 		uint8_t id, Numthreads;
 		uint32_t istart, iend, chuncksize;
 		Numthreads = omp_get_num_threads();			// NÚMERO DE HILOS CORRIENDO
@@ -223,6 +227,12 @@ int main(int argc, char *argv[] ) {
 		id 		= 	omp_get_thread_num();		// ID DEL HILO
 		istart	=	id*chuncksize;				// I INICIAL PARA CADA HILOS
 		iend	=	(id+1)*chuncksize;			// I FINAL PARA HILO
+
+		uint32_t posBInst;
+
+		if ( istart != 0 ) posBInst	=	prefixLendesc[istart-1]*2;
+		else posBInst	=	0;
+
 		if ( id == Numthreads - 1 ) iend = TotalReads;
 		
 		printf("Hilo: %d, Start: %d, End: %d\n", id,istart,iend );
