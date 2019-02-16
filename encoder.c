@@ -69,6 +69,8 @@ int main(int argc, char *argv[] ) {
 	uint64_t	*Indexes;		// Índices referentes a los Reads
 	uint32_t	posBInst;		// Índice que controla BinInst
 	uint32_t	*MapPos;        // Posición de Matching respecto a la referencia
+	uint32_t	*TLendesc;		// Totalidad de lendesc que abarca cada hilo
+	uint32_t	*preTLendesc;	// Exclusive prefix Sum Totalidad de lendesc que abarca cada hilo
 	uint16_t  	*lendesc;    	// Cantidad de errores total en el Read
 	char      	*strand;   		// Caractér con el sentido del matching
 	uint8_t   	**Oper;			// Arreglo con la operación por error
@@ -184,6 +186,12 @@ int main(int argc, char *argv[] ) {
 	Preambulos	=	(uint8_t*) malloc (TamPreabulo*sizeof(uint8_t));
 	if ( Preambulos == NULL ) printf ("Not enough memory for Preambulos");
 
+	TLendesc	=	(uint32_t*) malloc( NThreads*sizeof(uint32_t) );
+	if ( TLendesc == NULL ) printf ("Not enough memory for TLendesc");
+
+	preTLendesc	=	(uint32_t*) malloc( NThreads*sizeof(uint32_t) );
+	if ( preTLendesc == NULL ) printf ("Not enough memory for preTLendesc");
+
 	posBInst	=	0;
 
 	#if TEST_PRE  		
@@ -203,7 +211,7 @@ int main(int argc, char *argv[] ) {
 	double elapsedTime;
 	gettimeofday(&t1,NULL);
 
-	#pragma omp parallel num_threads(NThreads)
+	#pragma omp parallel num_threads(NThreads) shared(TLendesc, preTLendesc)
 	{
 		uint8_t id, Numthreads;
 		uint32_t istart, iend, chuncksize;
@@ -221,6 +229,12 @@ int main(int argc, char *argv[] ) {
 		
 		printf("Hilo: %d, Start: %d, End: %d\n", id,istart,iend );
 
+		// Definir un BinInst privado para cada Thread y un acumulador
+		uint32_t 	lendescAcum = 0;
+		uint8_t		*pBinInst;
+		pBinInst	=   (uint8_t*)  malloc(sizeof(uint8_t));
+		if ( pBinInst == NULL ) printf ("Not enough memory for pBinInst");
+	
 		uint32_t posPream;
 		if ( id == 0 ) {
 			posPream = 0;
@@ -237,10 +251,18 @@ int main(int argc, char *argv[] ) {
 			// TAREA 1
 			if ( (index < TotalReads-1) && (MapPos[AuxInd]	==	MapPos[AuxInd+1]) ) MoreFrags =	1;
 			else MoreFrags	=	0;
+
+			// Realloc el Binst privado de acuerdo con el lendesc
+			if ( lendesc[AuxInd] != 0 ) {
+				lendescAcum	=	lendescAcum + lendesc[AuxInd];
+				pBinInst	=	(uint8_t*) realloc( pBinInst, (lendescAcum*BYTES_PER_ERROR) * sizeof(uint8_t));
+				if ( pBinInst == NULL ) printf ("Not enough memory for pBinInst"); fflush(stdout);
+			}
 			
-			//Aplicar el inst2bin
+			//Aplicar el inst2bin"
+			printf("id = %d, lendesc = %"PRIu16", acum = %"PRIu32"\n",id,lendesc[AuxInd],lendescAcum);
 			
-			Inst2Bin(	BinInst, Preambulos,&posBInst,&posPream, strand[AuxInd],MoreFrags,
+			Inst2Bin(	pBinInst, Preambulos,&posBInst,&posPream, strand[AuxInd],MoreFrags,
 						lendesc[AuxInd],Offset[AuxInd],Oper[AuxInd],
 						BaseRead[AuxInd],BaseRef[AuxInd],AuxInd, &flagPream, PREAMBULOS, 
 						ELOGS, BININST );
@@ -252,6 +274,18 @@ int main(int argc, char *argv[] ) {
 			if(BaseRef[AuxInd]) 	free(BaseRef[AuxInd]);	
 			
 		}
+		TLendesc[id]	=	lendescAcum;
+		#pragma omp barrier
+
+		#pragma omp single
+		{
+			preTLendesc[0]	=	0;
+			// exclusive prefix sum del vector de acumuladores
+			for ( int i = 1; i < Numthreads; i++ ) {
+				preTLendesc[i]	=	preTLendesc[i-1] + TLendesc[i-1];
+			}
+		}
+		memcpy(&BinInst[preTLendesc[id]],pBinInst,TLendesc[id]*BYTES_PER_ERROR*sizeof(uint8_t));
 	}
 
 	// SE CALCULA EL TIEMPO TOTAL DE EJECUCIÓN Y SE MUESTRA
@@ -337,9 +371,11 @@ void Inst2Bin(  uint8_t *BinInst, uint8_t *Preambulos, uint32_t *posBInst, uint3
 
 	/*auxPosInst++;
 	BinInst[auxPosInst] =   Preambulo(MoreFrags,strand,lendesc);*/
-	
+	printf("PUNTO A\n"); fflush(stdout);
     if ( lendesc > 0 ){
         if ((strand=='r')||(strand=='e')){
+			printf("PUNTO B\n"); fflush(stdout);
+
 			for (uint8_t  u=0; u<lendesc; u++){ //Converting each separated error of the read
 				auxPosInst++;
 				BinInst[auxPosInst] = Offset(Offsets[u], &rest);
@@ -361,6 +397,8 @@ void Inst2Bin(  uint8_t *BinInst, uint8_t *Preambulos, uint32_t *posBInst, uint3
 				// if ((BaseRead[u]>=0)&&(BaseRead[u]<=4)){} // FOR REAL ALIGNERS - BOTH CASES					
 			}
 		}else{         
+			printf("PUNTO C\n"); fflush(stdout);
+
             for (int  u=lendesc-1;u>=0; u--){				
 				auxPosInst++;
 				BinInst[auxPosInst]= Offset(Offsets[u+1], &rest);
