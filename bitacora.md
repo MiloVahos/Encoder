@@ -165,3 +165,6 @@
   y luego comenzando escribir en la posición siguiente
   ### Enfoque 2:
   Asumiendo que el prefix lendesc consume mucho tiempo, lo mejor es que cada uno de los hilos defina un subarrelo con su propio BinInst y que al final una ambos, para ello se puede usar realloc para ir variando dinamicamente los arreglos
+
+### 16 de Febrero
+  ### Objetivo: Implementar el enfoque 2 del paralelismo
