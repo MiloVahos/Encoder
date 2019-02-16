@@ -70,7 +70,6 @@ int main(int argc, char *argv[] ) {
 	uint32_t	posBInst;		// Índice que controla BinInst
 	uint32_t	*MapPos;        // Posición de Matching respecto a la referencia
 	uint16_t  	*lendesc;    	// Cantidad de errores total en el Read
-	uint32_t  	*prefixLendesc; // Sumatoria de prefijo exclusivo de lendesc
 	char      	*strand;   		// Caractér con el sentido del matching
 	uint8_t   	**Oper;			// Arreglo con la operación por error
 	uint16_t  	**Offset;   	// Arreglo de offsets por cada error
@@ -103,8 +102,6 @@ int main(int argc, char *argv[] ) {
 		if ( MapPos == NULL ) printf ("Not enough memory for MapPos");
 		lendesc        =   (uint16_t*)  malloc(TotalReads*sizeof(uint16_t));
 		if ( lendesc == NULL ) printf ("Not enough memory for lendesc");
-		prefixLendesc  =   (uint32_t*)  malloc(TotalReads*sizeof(uint32_t));
-		if ( prefixLendesc == NULL ) printf ("Not enough memory for prefixLendesc");
 		strand        =   (char*)  malloc(TotalReads*sizeof(char));
 		if ( strand == NULL ) printf ("Not enough memory for strand");
 		// ARREGLOS DE ARREGLOS
@@ -200,9 +197,6 @@ int main(int argc, char *argv[] ) {
 	#endif
 
 	printf("NTHREADS %d\n", NThreads);
-
-	// Calcular el arreglo de prefijos exclusivos
-	prefix_sum(lendesc,prefixLendesc,TotalReads, NThreads);
 
 	// ESTRUCTURA PARA MEDIR TIEMPO DE EJECUCIÓN
 	struct timeval t1,t2;
@@ -708,44 +702,4 @@ void EscalarBases(uint8_t *Base) {
 			*Base = 4;
 		break;
 	}
-}
-
-void prefix_sum( uint16_t *lendesc, uint32_t *prefixLendesc , uint32_t TotalReads, int NThreads) {
-
-	uint32_t nthr, *z;
-	uint32_t *x = prefixLendesc;
-
-  	#pragma omp parallel num_threads(NThreads)
-  	{
-    	int i;
-    	#pragma omp single
-    	{
-      		nthr = omp_get_num_threads();
-      		z = malloc(sizeof(uint32_t)*nthr+1);
-      		z[0] = 0;
-    	}
-
-    	int tid = omp_get_thread_num();
-    	uint32_t sum = 0;
-
-    	#pragma omp for schedule(static) 
-    		for(i=0; i< TotalReads; i++) {
-      			sum += lendesc[i];
-      			x[i] = sum;
-    		}
-    	z[tid+1] = sum;
-    	#pragma omp barrier
-
-    	int offset = 0;
-    	for(i=0; i<(tid+1); i++) {
-        	offset += z[i];
-    	}
-
-    	#pragma omp for schedule(static)
-    	for(i=0; i< TotalReads; i++) {
-      		x[i] += offset;
-    	}
-  	}
-  	free(z);
-	
 }
