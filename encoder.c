@@ -286,6 +286,9 @@ int main(int argc, char *argv[] ) {
 			}
 		}
 		memcpy(&BinInst[preTLendesc[id]],pBinInst,TLendesc[id]*BYTES_PER_ERROR*sizeof(uint8_t));
+		if(pBinInst) free(pBinInst);
+		if(TLendesc) free(TLendesc);
+		if(preTLendesc) free(preTLendesc);
 	}
 
 	// SE CALCULA EL TIEMPO TOTAL DE EJECUCIÓN Y SE MUESTRA
@@ -371,10 +374,8 @@ void Inst2Bin(  uint8_t *BinInst, uint8_t *Preambulos, uint32_t *posBInst, uint3
 
 	/*auxPosInst++;
 	BinInst[auxPosInst] =   Preambulo(MoreFrags,strand,lendesc);*/
-	printf("PUNTO A\n"); fflush(stdout);
     if ( lendesc > 0 ){
         if ((strand=='r')||(strand=='e')){
-			printf("PUNTO B\n"); fflush(stdout);
 
 			for (uint8_t  u=0; u<lendesc; u++){ //Converting each separated error of the read
 				auxPosInst++;
@@ -397,8 +398,6 @@ void Inst2Bin(  uint8_t *BinInst, uint8_t *Preambulos, uint32_t *posBInst, uint3
 				// if ((BaseRead[u]>=0)&&(BaseRead[u]<=4)){} // FOR REAL ALIGNERS - BOTH CASES					
 			}
 		}else{         
-			printf("PUNTO C\n"); fflush(stdout);
-
             for (int  u=lendesc-1;u>=0; u--){				
 				auxPosInst++;
 				BinInst[auxPosInst]= Offset(Offsets[u+1], &rest);
