@@ -201,16 +201,16 @@ int main(int argc, char *argv[] ) {
 		BININST = fopen( "BinInst.txt", "w" );			
 	#endif
 
-	printf("NTHREADS %d\n", NThreads);
-
 	// 3.1 Calcular el arreglo de prefijos exclusivos
 	prefix_sum(lendesc,prefixLendesc,TotalReads, NThreads);
 
-	
-	// 3.2 Declaraciones
+	// 3.2 Cálculos previos
+	uint32_t chuncksize	=	TotalReads / NThreads;
+	if ( chuncksize % 2 != 0 ) {	// Si es impar
+		chuncksize = chuncksize + 1;
+	}
 
-	
-	#pragma omp parallel num_threads(NThreads)
+	#pragma omp parallel num_threads(NThreads) shared(chuncksize)
 	{
 		/**
 		 * En esta implementación, se ha calculado el vector de prefijo inclusivo o exclusivo del vector
@@ -218,15 +218,9 @@ int main(int argc, char *argv[] ) {
 		 * de la porción de reads que el maneja, siendo así, tiene la información desde donde debe llenar
 		 * el vector BinInst
 		*/
-		uint8_t id, Numthreads;
-		uint32_t istart, iend, chuncksize;
-		Numthreads = omp_get_num_threads();			// NÚMERO DE HILOS CORRIENDO
-
-		chuncksize	=	TotalReads / Numthreads;
-		if ( chuncksize % 2 != 0 ) {	// Si es impar
-			chuncksize = chuncksize + 1;
-		}
-
+		uint8_t id;
+		uint32_t istart, iend;
+	
 		id 		= 	omp_get_thread_num();		// ID DEL HILO
 		istart	=	id*chuncksize;				// I INICIAL PARA CADA HILOS
 		iend	=	(id+1)*chuncksize;			// I FINAL PARA HILO
@@ -236,16 +230,14 @@ int main(int argc, char *argv[] ) {
 		if ( istart != 0 ) posBInst	=	prefixLendesc[istart-1]*2;
 		else posBInst	=	0;
 
-		if ( id == Numthreads - 1 ) iend = TotalReads;
+		if ( id == NThreads - 1 ) iend = TotalReads;
 		
 		printf("Hilo: %d, Start: %d, End: %d\n", id,istart,iend );
 
 		uint32_t posPream;
-		if ( id == 0 ) {
-			posPream = 0;
-		} else {
-			posPream = ( (TotalReads/2) / Numthreads ) * id;
-		}
+		if ( id == 0 ) posPream = 0;
+		else posPream = ( (TotalReads/2) / NThreads ) * id;
+		
 		uint8_t flagPream	=	0;
 		for ( int index = istart; index < iend; index++ ) {
 
