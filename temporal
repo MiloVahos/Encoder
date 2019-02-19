@@ -54,6 +54,13 @@ int x = getchar();
  
 }
 
+		printf("Pos pream thread %d es %"PRIu32"\n",id, posPream);
+
+
+
+
+
+
 
 // TIME CONTROL
 	elapsedTime	= (t2.tv_sec - t1.tv_sec) * 1000.0;
@@ -70,3 +77,52 @@ printf("NTErrors = %"PRIu64"\n",NTErrors);
 
 
 			// printf("%d - %"PRIu32" - %"PRIu16" - %c \n",i,MapPos[i],lendesc[i],strand[i]);
+
+
+void prefix_sum( uint16_t *lendesc, uint32_t *prefixLendesc , uint32_t TotalReads) {
+
+	if ( TotalReads > 1) {
+		int i;
+		int j;
+		int l;
+		if ( TotalReads == 2 ) {
+			prefixLendesc[1] = lendesc[0] + lendesc[1];
+		} else {
+
+			#pragma omp parallel num_threads(TotalReads) private(i)
+			for( i = 2; i <= TotalReads; i *= 2 ) {
+				if ((omp_get_thread_num() % i) == (i - 1)) {
+					prefixLendesc[omp_get_thread_num()] = lendesc[omp_get_thread_num()] + lendesc[omp_get_thread_num() - i/2];
+				}
+				#pragma omp barrier
+			}
+
+			for( i=i/2; i > 1; i /= 2 ) {
+				if ((omp_get_thread_num() % i) == (i/2 - 1)) {
+					if (!(omp_get_thread_num() < (i/2 - 1))) {
+						prefixLendesc[omp_get_thread_num()] = lendesc[omp_get_thread_num()] + lendesc[omp_get_thread_num() - i/2];
+					}
+				}
+				#pragma omp barrier
+			}
+		}
+	}
+
+}
+
+// TEST INCLUSIVE PREFIX SUM
+for ( int i = 0; i < TotalReads; i++ ) {
+		if( TEST_PRE == 2 ) fprintf(PREAMBULOS, "Lendesc: %"PRIu16" - prefix: %"PRIu32"\n",lendesc[i], prefixLendesc[i]);
+	}
+
+if ( TEST_PRE == 2 ) {
+		for ( int i = 0; i < TamPreabulo; i++ ) {
+			fprintf(PREAMBULOS,"%"PRIu8"\n", Preambulos[i]);
+		}
+	}
+
+	if ( TEST_BINST == 2 ) {
+		for ( int i = 0; i < TamBinInst; i++ ) {
+			fprintf(BININST,"%"PRIu8"\n", BinInst[i]);
+		}
+	}

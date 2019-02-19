@@ -24,10 +24,10 @@
 #define MASK (BASE-1)
 #define DIGITS(v, shift) (((v) >> shift) & MASK)
 #define BYTES_PER_ERROR 2			// 1 BYTE PARA EL OFFSET, 1 BYTE PARA LA DESCRIPCIÓN
-#define TEST_PRE	2				// SI TEST_PRE ES 1, SE ACTIVAN LOS ARCHIVOS DE PRUEBA, DE LO CONTRARIO NO
+#define TEST_PRE	0				// SI TEST_PRE ES 1, SE ACTIVAN LOS ARCHIVOS DE PRUEBA, DE LO CONTRARIO NO
 #define ERROR_LOG	0				// SI ERROR_LOG ES 1, SE ACTIVA LA GENERACIÓN DE LOGS DE 
 									// ERRORES CONTROLADOS EN LA CODIFICACIÓN
-#define TEST_BINST	2				// SI TEST_BINST ES 1, SE ACTIVAN LOS ARCHIVOS DE PRUEBA DE BinINST
+#define TEST_BINST	0				// SI TEST_BINST ES 1, SE ACTIVAN LOS ARCHIVOS DE PRUEBA DE BinINST
 
 // FUNCTIONS PROTOTYPES
 //*******************Coding (Compression)(Inst --> binary coding)************************************//
@@ -49,11 +49,6 @@ void EscalarBases(uint8_t *Base);
 void RadixSort(uint32_t TotalReads, uint32_t *MapPos, uint64_t *Indexes);
 
 int main() {
-
-	// ESTRUCTURA PARA MEDIR TIEMPO DE EJECUCIÓN
-	struct timeval t1,t2;
-	double elapsedTime;
-	gettimeofday(&t1,NULL);
 
 	// VARIABLES DE PROCESO
 	uint32_t	TotalReads;		// CANTIDAD TOTAL DE READS = B*C
@@ -81,9 +76,9 @@ int main() {
 
 	// VARIABLES DE SALID DEL Inst2Bin
 	uint8_t		*BinInst;		// Arreglo de salida del Inst2Bin
-	uint8_t		*Preambulos;	// Arreglo de salida con los preámbulos
+	uint8_t		*Preambulos;	// Arreglo de salida con los preámbulos	
 
-	// 1. OBTENER LOS DATOS QUE PROVIENEN DEL ARG
+	// 1. LECTURA DE DATOS (NO SE TIENE EN CUENTA EN LA MEDIDA DE TIEMPO)
 	ALIGN	= 	fopen( "GRCh38.align" , "r" );
 	if( ALIGN != NULL ) {
 
@@ -154,22 +149,26 @@ int main() {
 		}		
 		fscanf( ALIGN, "%"SCNu64"", &NTErrors );
 	}
-	fclose (ALIGN);	// SE CIERRA EL ARCHIVO DE ALINEAMIENTO
+	fclose (ALIGN);
+
+	// ESTRUCTURA PARA MEDIR TIEMPO DE EJECUCIÓN
+	struct timeval t1,t2;
+	double elapsedTime;
+	gettimeofday(&t1,NULL);
 
 	// 2. USANDO EL RADIX SORT SE ORDENA EL VECTOR DE ÍNDICES DE ACUERDO CON LA POSICIÓN DE MAPEO
-	// 		- SE CREA EL VECTOR DE ÍNDICES [0 - TotalReads-1]
 	Indexes	=   (uint64_t*)  malloc(TotalReads*sizeof(uint64_t));
 	if ( Indexes == NULL ) printf ("Not enough memory for Indexes");
 	for ( int i = 0; i < TotalReads; i++ ) Indexes[i] =	i;
 
-	//		- ALGORITMO DE ORDENAMIENTO RADIX SORT
+	// ALGORITMO DE ORDENAMIENTO RADIX SORT
 	uint32_t *AuxMapPos;
 	AuxMapPos	=	(uint32_t*) malloc( TotalReads*sizeof(uint32_t));
 	memcpy(AuxMapPos,MapPos,TotalReads*sizeof(uint32_t));
 	RadixSort(TotalReads,AuxMapPos,Indexes);
 	free(AuxMapPos);	
 
-	//		- APLICACIÓN DEL INS2BIN
+	// 3. APLICACIÓN DEL INS2BIN
 	uint64_t TamBinInst	= NTErrors*BYTES_PER_ERROR;
 	uint32_t TamPreabulo = floor( TotalReads/2 )+1;
 	BinInst	=   (uint8_t*)  malloc(TamBinInst*sizeof(uint8_t));
@@ -183,46 +182,44 @@ int main() {
 	flagPream	=	0;
 	uint64_t AuxInd	=	0;
 
-	if ( TEST_PRE == 1 || TEST_PRE == 2 ) PREAMBULOS	= fopen( "Preambulos.txt" , "w" );
-	if ( ERROR_LOG == 1 ) ELOGS = fopen( "ELogs.txt", "w" );
-	if ( TEST_BINST == 1 || TEST_BINST == 2 ) BININST = fopen( "BinInst.txt", "w" );
+	#if TEST_PRE  		
+		PREAMBULOS = fopen( "Preambulos.txt" , "w" ); 	
+	#endif
+	#if ERROR_LOG 		
+		ELOGS = fopen( "ELogs.txt", "w" ); 				
+	#endif
+	#if TEST_BINST		
+		BININST = fopen( "BinInst.txt", "w" );			
+	#endif
 
 	for ( int index = 0; index < TotalReads; index++ ) {
 
-		// Verificar si el siguiente read mapea en la misma posición
 		AuxInd	=	Indexes[index];
 		if ( (index < TotalReads-1) && (MapPos[AuxInd]	==	MapPos[AuxInd+1]) ) MoreFrags	=	1;
 		else MoreFrags	=	0;
 		
-		//Aplicar el inst2bin
-		
 		Inst2Bin(	BinInst, Preambulos,&posBInst,&posPream, strand[AuxInd],MoreFrags,
 					lendesc[AuxInd],Offset[AuxInd],Oper[AuxInd],
 					BaseRead[AuxInd],BaseRef[AuxInd],AuxInd, &flagPream, PREAMBULOS, ELOGS, BININST );
-
-		if(Offset[AuxInd])		free(Offset[AuxInd]);
-		if(Oper[AuxInd]) 		free(Oper[AuxInd]);		
-		if(BaseRead[AuxInd]) 	free(BaseRead[AuxInd]);		
-		if(BaseRef[AuxInd]) 	free(BaseRef[AuxInd]);		
 		
 	}
 
-	if ( TEST_PRE == 2 ) {
-		for ( int i = 0; i < TamPreabulo; i++ ) {
-			fprintf(PREAMBULOS,"%"PRIu8"\n", Preambulos[i]);
-		}
-	}
+	// SE CALCULA EL TIEMPO TOTAL DE EJECUCIÓN Y SE MUESTRA
+	gettimeofday(&t2,NULL);
+	elapsedTime = (double) (t2.tv_usec - t1.tv_usec) / 1000000 + (double) (t2.tv_sec - t1.tv_sec);
+	printf("Processing time: %lf seg\n",elapsedTime);
+	printf("Número de Reads: %"PRIu32"\n",TotalReads);
+	printf("Número de Errores: %"PRIu64"\n",NTErrors);
 
-	if ( TEST_BINST == 2 ) {
-		for ( int i = 0; i < TamBinInst; i++ ) {
-			fprintf(BININST,"%"PRIu8"\n", BinInst[i]);
-		}
-	}
-
-	if ( TEST_PRE == 1 || TEST_PRE == 2 ) fclose(PREAMBULOS);
-	if ( ERROR_LOG == 1 ) fclose(ELOGS);
-	if ( TEST_BINST == 1 || TEST_BINST == 2 ) fclose(BININST);
-
+	#if TEST_PRE 
+		fclose(PREAMBULOS);
+	#endif
+	#if ERROR_LOG
+		fclose(ELOGS);
+	#endif
+	#if TEST_BINST 
+		fclose(BININST);
+	#endif
 
 	// CIERRE DE ARCHIVOS Y SE LIBERA LA MEMORIA FALTANTE
 	if(MapPos)		free(MapPos);
@@ -235,13 +232,6 @@ int main() {
 	if(BinInst) 	free(BinInst);
 	if(Preambulos) 	free(Preambulos);
 	if(Indexes) 	free(Indexes);
-    
-	// SE CALCULA EL TIEMPO TOTAL DE EJECUCIÓN Y SE MUESTRA
-	gettimeofday(&t2,NULL);
-	elapsedTime = (double) (t2.tv_usec - t1.tv_usec) / 1000000 + (double) (t2.tv_sec - t1.tv_sec);
-	printf("Processing time: %lf seg\n",elapsedTime);
-	printf("Número de Reads: %"PRIu32"\n",TotalReads);
-	printf("Número de Errores: %"PRIu64"\n",NTErrors);
 
     return 0;
 
@@ -275,16 +265,21 @@ void Inst2Bin(  uint8_t *BinInst, uint8_t *Preambulos, uint32_t *posBInst, uint3
     uint8_t     aux 	=   0;
     uint8_t     MoreErr =   1;
 	int aux_i;
+
 	if ( (*flagPream) == 0 ) {
 		// En este caso llena los 4 bits más significativos
 		Preambulos[auxPosPream] = 	0;
 		Preambulos[auxPosPream]	=	Preambulo(MoreFrags,strand,lendesc,*flagPream,Preambulos[auxPosPream]);
-		if ( TEST_PRE == 1 ) fprintf(PREAMBULOS,"Strand: %c , Preambulo: %"PRIu8", Position: %"PRIu32" \n", strand,Preambulos[auxPosPream],auxPosPream);
+		#if TEST_PRE 
+			fprintf(PREAMBULOS,"Strand: %c , Preambulo: %"PRIu8", Position: %"PRIu32" \n", strand,Preambulos[auxPosPream],auxPosPream);
+		#endif
 		(*flagPream) = 1;
 	} else {
 		// En este caso llena los 4 bits menos significativos
 		Preambulos[auxPosPream]	=	Preambulo(MoreFrags,strand,lendesc,*flagPream,Preambulos[auxPosPream]);
-		if ( TEST_PRE == 1 ) fprintf(PREAMBULOS,"Strand: %c , Preambulo: %"PRIu8", Position: %"PRIu32" \n", strand,Preambulos[auxPosPream],auxPosPream);
+		#if TEST_PRE 
+			fprintf(PREAMBULOS,"Strand: %c , Preambulo: %"PRIu8", Position: %"PRIu32" \n", strand,Preambulos[auxPosPream],auxPosPream);
+		#endif
 		(*flagPream) = 0;
 		auxPosPream++;
 	}
@@ -297,7 +292,9 @@ void Inst2Bin(  uint8_t *BinInst, uint8_t *Preambulos, uint32_t *posBInst, uint3
 			for (uint8_t  u=0; u<lendesc; u++){ //Converting each separated error of the read
 				auxPosInst++;
 				BinInst[auxPosInst] = Offset(Offsets[u], &rest);
-				if ( TEST_BINST == 1 ) fprintf(BININST,"Offset R (BYTE 1) Index: %"PRIu64" AuxPosInst: %"PRIu32", BinInst[auxPosInst]: %"PRIu8", Offset: %"PRIu16", Rest: %"PRIu8"\n",Index,auxPosInst,BinInst[auxPosInst],Offsets[u],rest);
+				#if TEST_BINST 
+					fprintf(BININST,"Offset R (BYTE 1) Index: %"PRIu64" AuxPosInst: %"PRIu32", BinInst[auxPosInst]: %"PRIu8", Offset: %"PRIu16", Rest: %"PRIu8"\n",Index,auxPosInst,BinInst[auxPosInst],Offsets[u],rest);
+				#endif
 				auxPosInst++;
 
 				if ( (Oper[u] == 's') || (Oper[u] == 'S') || (Oper[u] == 'i') ) {
@@ -305,8 +302,9 @@ void Inst2Bin(  uint8_t *BinInst, uint8_t *Preambulos, uint32_t *posBInst, uint3
 					EscalarBases(&BaseRef[u]);
 				}
 				BinInst[auxPosInst] = TrdBitInst(u, rest, Oper, BaseRead, BaseRef[u], Offsets, lendesc, strand, &aux_i, ELOGS);
-				if ( TEST_BINST == 1 ) fprintf(BININST,"Offset R (BYTE 2) Index: %"PRIu64" AuxPosInst: %"PRIu32", BinInst[auxPosInst]: %"PRIu8", BaseRef: %"PRIu8" \n",Index,auxPosInst,BinInst[auxPosInst],BaseRef[u]);
-				
+				#if TEST_BINST 
+					fprintf(BININST,"Offset R (BYTE 2) Index: %"PRIu64" AuxPosInst: %"PRIu32", BinInst[auxPosInst]: %"PRIu8", BaseRef: %"PRIu8" \n",Index,auxPosInst,BinInst[auxPosInst],BaseRef[u]);
+				#endif				
 				u=aux_i;
 
 				// if ((BaseRead[u]>=0)&&(BaseRead[u]<=4)){} // FOR REAL ALIGNERS - BOTH CASES					
@@ -315,7 +313,9 @@ void Inst2Bin(  uint8_t *BinInst, uint8_t *Preambulos, uint32_t *posBInst, uint3
             for (int  u=lendesc-1;u>=0; u--){				
 				auxPosInst++;
 				BinInst[auxPosInst]= Offset(Offsets[u+1], &rest);
-				if ( TEST_BINST == 1 ) fprintf(BININST,"Offset F (BYTE 1) Index: %"PRIu64" AuxPosInst: %"PRIu32", BinInst[auxPosInst]: %"PRIu8", Offset: %"PRIu16", Rest: %"PRIu8"\n",Index,auxPosInst,BinInst[auxPosInst],Offsets[u],rest);
+				#if TEST_BINST
+					fprintf(BININST,"Offset F (BYTE 1) Index: %"PRIu64" AuxPosInst: %"PRIu32", BinInst[auxPosInst]: %"PRIu8", Offset: %"PRIu16", Rest: %"PRIu8"\n",Index,auxPosInst,BinInst[auxPosInst],Offsets[u],rest);
+				#endif
 				auxPosInst++;
 
 				if ( (Oper[u] == 's') || (Oper[u] == 'S') || (Oper[u] == 'i') ) {
@@ -323,8 +323,9 @@ void Inst2Bin(  uint8_t *BinInst, uint8_t *Preambulos, uint32_t *posBInst, uint3
 					EscalarBases(&BaseRef[u]);
 				}
 				BinInst[auxPosInst]= TrdBitInst(u, rest, Oper, BaseRead, BaseRef[u], Offsets, lendesc, strand,&aux_i, ELOGS);
-				if ( TEST_BINST == 1 ) fprintf(BININST,"Offset R (BYTE 2) Index: %"PRIu64" AuxPosInst: %"PRIu32", BinInst[auxPosInst]: %"PRIu8", BaseRef: %"PRIu8" \n",Index,auxPosInst,BinInst[auxPosInst],BaseRef[u]);
-
+				#if TEST_BINST
+					fprintf(BININST,"Offset R (BYTE 2) Index: %"PRIu64" AuxPosInst: %"PRIu32", BinInst[auxPosInst]: %"PRIu8", BaseRef: %"PRIu8" \n",Index,auxPosInst,BinInst[auxPosInst],BaseRef[u]);
+				#endif
 				u=aux_i;			
 			}
 		}
@@ -369,7 +370,6 @@ uint8_t Preambulo(uint8_t moreFrags, char strand, uint16_t  lendesc, uint8_t fla
 		aux = 	mask|aux;
 	}
 
-	
 	return(aux);
 };
 
@@ -530,14 +530,18 @@ uint8_t BitsBase(uint8_t BRead, uint8_t BRef, FILE *ELOGS){
 			auxInt  =   abs((int)BRead-(int)BRef);
 		}else{
 			if (BRead==BRef) {
-				if ( ERROR_LOG == 1 )  fprintf(ELOGS," A Error Grave entre bases iguales Base1 %"PRIu8" Base2 %"PRIu8" \n", BRead,  BRef);
+				#if ERROR_LOG
+					fprintf(ELOGS," A Error Grave entre bases iguales Base1 %"PRIu8" Base2 %"PRIu8" \n", BRead,  BRef);
+				#endif
 			} else {
 				auxInt=((5-(int)BRef)+(int)BRead);
 			}
 		}
 		switch(auxInt){
 			case 0:
-				if ( ERROR_LOG == 1 )  fprintf(ELOGS," B Error Grave entre bases iguales Base1 %"PRIu8" Base2 %"PRIu8" \n", BRead,  BRef);
+				#if ERROR_LOG  
+					fprintf(ELOGS," B Error Grave entre bases iguales Base1 %"PRIu8" Base2 %"PRIu8" \n", BRead,  BRef);
+				#endif
 			break;
 			case 1: aux=0x0;  //Distancia 1
 			break;
