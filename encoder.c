@@ -25,10 +25,10 @@
 #define MASK (BASE-1)
 #define DIGITS(v, shift) (((v) >> shift) & MASK)
 #define BYTES_PER_ERROR 2			// 1 BYTE PARA EL OFFSET, 1 BYTE PARA LA DESCRIPCIÓN
-#define TEST_PRE	1				// SI TEST_PRE ES 1, SE ACTIVAN LOS ARCHIVOS DE PRUEBA, DE LO CONTRARIO NO
+#define TEST_PRE	0				// SI TEST_PRE ES 1, SE ACTIVAN LOS ARCHIVOS DE PRUEBA, DE LO CONTRARIO NO
 #define ERROR_LOG	0				// SI ERROR_LOG ES 1, SE ACTIVA LA GENERACIÓN DE LOGS DE 
 									// ERRORES CONTROLADOS EN LA CODIFICACIÓN
-#define TEST_BINST	1				// SI TEST_BINST ES 1, SE ACTIVAN LOS ARCHIVOS DE PRUEBA DE BinINST
+#define TEST_BINST	0				// SI TEST_BINST ES 1, SE ACTIVAN LOS ARCHIVOS DE PRUEBA DE BinINST
 
 // FUNCTIONS PROTOTYPES
 //*******************Coding (Compression)(Inst --> binary coding)************************************//
@@ -76,7 +76,7 @@ int main(int argc, char *argv[] ) {
 	uint8_t   	**BaseRef;   	// Arreglo con la base de la referencia (Read Referencia)
 	uint8_t 	**BaseRead; 	// Arreglo con la base después de la mutación (Read Destino)
 
-	// VARIABLES DE SALID DEL Inst2Bin
+	// VARIABLES DE SALIDA DEL Inst2Bin
 	uint8_t		*BinInst;		// Arreglo de salida del Inst2Bin
 	uint8_t		*Preambulos;	// Arreglo de salida con los preámbulos
 
@@ -89,7 +89,7 @@ int main(int argc, char *argv[] ) {
 		}
 	}
 
-	// 1. OBTENER LOS DATOS QUE PROVIENEN DEL ARG
+	// 1. LECTURA DE DATOS (NO SE TIENE EN CUENTA EN LA MEDIDA DE TIEMPO)
 	ALIGN	= 	fopen( "GRCh38.align" , "r" );
 	if( ALIGN != NULL ) {
 
@@ -163,22 +163,27 @@ int main(int argc, char *argv[] ) {
 		fscanf( ALIGN, "%"SCNu64"", &NTErrors );
 		printf("Número de Errores: %"PRIu64"\n",NTErrors);
 	}
-	fclose (ALIGN);	// SE CIERRA EL ARCHIVO DE ALINEAMIENTO
+	fclose (ALIGN);
+
+	// ESTRUCTURA PARA MEDIR TIEMPO DE EJECUCIÓN
+	struct timeval t1,t2;
+	double elapsedTime;
+	gettimeofday(&t1,NULL);
+
 
 	// 2. USANDO EL RADIX SORT SE ORDENA EL VECTOR DE ÍNDICES DE ACUERDO CON LA POSICIÓN DE MAPEO
-	// 		- SE CREA EL VECTOR DE ÍNDICES [0 - TotalReads-1]
 	Indexes	=   (uint64_t*)  malloc(TotalReads*sizeof(uint64_t));
 	if ( Indexes == NULL ) printf ("Not enough memory for Indexes");
 	for ( int i = 0; i < TotalReads; i++ ) Indexes[i] =	i;
 
-	//	- ALGORITMO DE ORDENAMIENTO RADIX SORT
+	// ALGORITMO DE ORDENAMIENTO RADIX SORT
 	uint32_t *AuxMapPos;
 	AuxMapPos	=	(uint32_t*) malloc( TotalReads*sizeof(uint32_t));
 	memcpy(AuxMapPos,MapPos,TotalReads*sizeof(uint32_t));
 	RadixSort(TotalReads,AuxMapPos,Indexes);
 	free(AuxMapPos);	
 
-	//		- APLICACIÓN DEL INS2BIN
+	// 3. APLICACIÓN DEL INS2BIN
 	uint64_t TamBinInst	= NTErrors*BYTES_PER_ERROR;
 	uint32_t TamPreabulo = floor( TotalReads/2 )+1;
 	BinInst	=   (uint8_t*)  malloc(TamBinInst*sizeof(uint8_t));
@@ -198,15 +203,13 @@ int main(int argc, char *argv[] ) {
 
 	printf("NTHREADS %d\n", NThreads);
 
-	// Calcular el arreglo de prefijos exclusivos
-	// Se debe trabajar en la paralelización de esto
+	// 3.1 Calcular el arreglo de prefijos exclusivos
 	prefix_sum(lendesc,prefixLendesc,TotalReads, NThreads);
 
-	// ESTRUCTURA PARA MEDIR TIEMPO DE EJECUCIÓN
-	struct timeval t1,t2;
-	double elapsedTime;
-	gettimeofday(&t1,NULL);
+	
+	// 3.2 Declaraciones
 
+	
 	#pragma omp parallel num_threads(NThreads)
 	{
 		/**
@@ -260,13 +263,6 @@ int main(int argc, char *argv[] ) {
 						lendesc[AuxInd],Offset[AuxInd],Oper[AuxInd],
 						BaseRead[AuxInd],BaseRef[AuxInd],AuxInd, &flagPream, PREAMBULOS, 
 						ELOGS, BININST );
-			
-			// TAREA 6
-			if(Offset[AuxInd])		free(Offset[AuxInd]);
-			if(Oper[AuxInd]) 		free(Oper[AuxInd]);		
-			if(BaseRead[AuxInd]) 	free(BaseRead[AuxInd]);		
-			if(BaseRef[AuxInd]) 	free(BaseRef[AuxInd]);	
-			
 		}
 	}
 
@@ -287,7 +283,6 @@ int main(int argc, char *argv[] ) {
 		fclose(BININST);
 	#endif
 	
-
 	// CIERRE DE ARCHIVOS Y SE LIBERA LA MEMORIA FALTANTE
 	if(MapPos)		free(MapPos);
 	if(strand)		free(strand);

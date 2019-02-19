@@ -165,3 +165,14 @@
   y luego comenzando escribir en la posición siguiente
   ### Enfoque 2:
   Asumiendo que el prefix lendesc consume mucho tiempo, lo mejor es que cada uno de los hilos defina un subarrelo con su propio BinInst y que al final una ambos, para ello se puede usar realloc para ir variando dinamicamente los arreglos
+
+### 18 de Febrero
+  ### Objetivo: Probar la versión estática y comparar con la versión secuencial
+  ### Estrategia:
+  - [] Organizar el código de la versión estática.
+  - [] Organizar el código de la versión secuencial
+  - [] Descargar los codigos en el servidor
+  - [] Generar archivos de prueba
+  - [] Hacer pruebas de funcionalidad
+  
+### Puntos clave:
