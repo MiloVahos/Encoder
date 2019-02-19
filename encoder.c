@@ -67,7 +67,6 @@ int main(int argc, char *argv[] ) {
 
 	// VARIABLES DE OPERACIÓN
 	uint64_t	*Indexes;		// Índices referentes a los Reads
-	uint32_t	posBInst;		// Índice que controla BinInst
 	uint32_t	*MapPos;        // Posición de Matching respecto a la referencia
 	uint16_t  	*lendesc;    	// Cantidad de errores total en el Read
 	uint32_t  	*prefixLendesc; // Sumatoria de prefijo exclusivo de lendesc
@@ -77,7 +76,7 @@ int main(int argc, char *argv[] ) {
 	uint8_t   	**BaseRef;   	// Arreglo con la base de la referencia (Read Referencia)
 	uint8_t 	**BaseRead; 	// Arreglo con la base después de la mutación (Read Destino)
 
-	// VARIABLES DE SALID DEL Inst2Bin
+	// VARIABLES DE SALIDA DEL Inst2Bin
 	uint8_t		*BinInst;		// Arreglo de salida del Inst2Bin
 	uint8_t		*Preambulos;	// Arreglo de salida con los preámbulos
 
@@ -90,7 +89,7 @@ int main(int argc, char *argv[] ) {
 		}
 	}
 
-	// 1. OBTENER LOS DATOS QUE PROVIENEN DEL ARG
+	// 1. LECTURA DE DATOS (NO SE TIENE EN CUENTA EN LA MEDIDA DE TIEMPO)
 	ALIGN	= 	fopen( "GRCh38.align" , "r" );
 	if( ALIGN != NULL ) {
 
@@ -164,30 +163,33 @@ int main(int argc, char *argv[] ) {
 		fscanf( ALIGN, "%"SCNu64"", &NTErrors );
 		printf("Número de Errores: %"PRIu64"\n",NTErrors);
 	}
-	fclose (ALIGN);	// SE CIERRA EL ARCHIVO DE ALINEAMIENTO
+	fclose (ALIGN);
+
+	// ESTRUCTURA PARA MEDIR TIEMPO DE EJECUCIÓN
+	struct timeval t1,t2;
+	double elapsedTime;
+	gettimeofday(&t1,NULL);
+
 
 	// 2. USANDO EL RADIX SORT SE ORDENA EL VECTOR DE ÍNDICES DE ACUERDO CON LA POSICIÓN DE MAPEO
-	// 		- SE CREA EL VECTOR DE ÍNDICES [0 - TotalReads-1]
 	Indexes	=   (uint64_t*)  malloc(TotalReads*sizeof(uint64_t));
 	if ( Indexes == NULL ) printf ("Not enough memory for Indexes");
 	for ( int i = 0; i < TotalReads; i++ ) Indexes[i] =	i;
 
-	//	- ALGORITMO DE ORDENAMIENTO RADIX SORT
+	// ALGORITMO DE ORDENAMIENTO RADIX SORT
 	uint32_t *AuxMapPos;
 	AuxMapPos	=	(uint32_t*) malloc( TotalReads*sizeof(uint32_t));
 	memcpy(AuxMapPos,MapPos,TotalReads*sizeof(uint32_t));
 	RadixSort(TotalReads,AuxMapPos,Indexes);
 	free(AuxMapPos);	
 
-	//		- APLICACIÓN DEL INS2BIN
+	// 3. APLICACIÓN DEL INS2BIN
 	uint64_t TamBinInst	= NTErrors*BYTES_PER_ERROR;
 	uint32_t TamPreabulo = floor( TotalReads/2 )+1;
 	BinInst	=   (uint8_t*)  malloc(TamBinInst*sizeof(uint8_t));
 	if ( BinInst == NULL ) printf ("Not enough memory for BinInst");
 	Preambulos	=	(uint8_t*) malloc (TamPreabulo*sizeof(uint8_t));
 	if ( Preambulos == NULL ) printf ("Not enough memory for Preambulos");
-
-	posBInst	=	0;
 
 	#if TEST_PRE  		
 		PREAMBULOS = fopen( "Preambulos.txt" , "w" ); 	
@@ -201,16 +203,21 @@ int main(int argc, char *argv[] ) {
 
 	printf("NTHREADS %d\n", NThreads);
 
-	// Calcular el arreglo de prefijos exclusivos
+	// 3.1 Calcular el arreglo de prefijos exclusivos
 	prefix_sum(lendesc,prefixLendesc,TotalReads, NThreads);
 
-	// ESTRUCTURA PARA MEDIR TIEMPO DE EJECUCIÓN
-	struct timeval t1,t2;
-	double elapsedTime;
-	gettimeofday(&t1,NULL);
+	
+	// 3.2 Declaraciones
 
+	
 	#pragma omp parallel num_threads(NThreads)
 	{
+		/**
+		 * En esta implementación, se ha calculado el vector de prefijo inclusivo o exclusivo del vector
+		 * lendesc, a partir de este vector cada hilo puede saber cuantos errores ocurrieron antes 
+		 * de la porción de reads que el maneja, siendo así, tiene la información desde donde debe llenar
+		 * el vector BinInst
+		*/
 		uint8_t id, Numthreads;
 		uint32_t istart, iend, chuncksize;
 		Numthreads = omp_get_num_threads();			// NÚMERO DE HILOS CORRIENDO
@@ -223,6 +230,12 @@ int main(int argc, char *argv[] ) {
 		id 		= 	omp_get_thread_num();		// ID DEL HILO
 		istart	=	id*chuncksize;				// I INICIAL PARA CADA HILOS
 		iend	=	(id+1)*chuncksize;			// I FINAL PARA HILO
+
+		uint32_t posBInst;
+
+		if ( istart != 0 ) posBInst	=	prefixLendesc[istart-1]*2;
+		else posBInst	=	0;
+
 		if ( id == Numthreads - 1 ) iend = TotalReads;
 		
 		printf("Hilo: %d, Start: %d, End: %d\n", id,istart,iend );
@@ -250,13 +263,6 @@ int main(int argc, char *argv[] ) {
 						lendesc[AuxInd],Offset[AuxInd],Oper[AuxInd],
 						BaseRead[AuxInd],BaseRef[AuxInd],AuxInd, &flagPream, PREAMBULOS, 
 						ELOGS, BININST );
-			
-			// TAREA 6
-			if(Offset[AuxInd])		free(Offset[AuxInd]);
-			if(Oper[AuxInd]) 		free(Oper[AuxInd]);		
-			if(BaseRead[AuxInd]) 	free(BaseRead[AuxInd]);		
-			if(BaseRef[AuxInd]) 	free(BaseRef[AuxInd]);	
-			
 		}
 	}
 
@@ -277,7 +283,6 @@ int main(int argc, char *argv[] ) {
 		fclose(BININST);
 	#endif
 	
-
 	// CIERRE DE ARCHIVOS Y SE LIBERA LA MEMORIA FALTANTE
 	if(MapPos)		free(MapPos);
 	if(strand)		free(strand);
