@@ -169,10 +169,10 @@
 ### 18 de Febrero
   ### Objetivo: Probar la versión estática y comparar con la versión secuencial
   ### Estrategia:
-  - [] Organizar el código de la versión estática.
-  - [] Organizar el código de la versión secuencial
-  - [] Descargar los codigos en el servidor
-  - [] Generar archivos de prueba
-  - [] Hacer pruebas de funcionalidad
+  - [x] Organizar el código de la versión estática.
+  - [x] Organizar el código de la versión secuencial
+  - [x] Descargar los codigos en el servidor
+  - [x] Generar archivos de prueba
+  - [x] Hacer pruebas de funcionalidad
   
 ### Puntos clave:

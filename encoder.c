@@ -171,10 +171,27 @@ int main(int argc, char *argv[] ) {
 	gettimeofday(&t1,NULL);
 
 
+	// 3.2 Cálculos previos
+	uint32_t chuncksize	=	TotalReads / NThreads;
+	if ( chuncksize % 2 != 0 ) {	// Si es impar
+		chuncksize = chuncksize + 1;
+	}
+
+
 	// 2. USANDO EL RADIX SORT SE ORDENA EL VECTOR DE ÍNDICES DE ACUERDO CON LA POSICIÓN DE MAPEO
 	Indexes	=   (uint64_t*)  malloc(TotalReads*sizeof(uint64_t));
 	if ( Indexes == NULL ) printf ("Not enough memory for Indexes");
-	for ( int i = 0; i < TotalReads; i++ ) Indexes[i] =	i;
+	// Paralelizar esta operación
+	#pragma omp parallel num_threads(NThreads) shared(chuncksize)
+	{
+		uint8_t id;
+		uint32_t istart, iend;
+		id 		= 	omp_get_thread_num();		// ID DEL HILO
+		istart	=	id*chuncksize;				// I INICIAL PARA CADA HILOS
+		iend	=	(id+1)*chuncksize;			// I FINAL PARA HILO
+		if ( id == NThreads - 1 ) iend = TotalReads;
+		for ( int i = istart; i < iend; i++ ) Indexes[i] =	i;
+	}
 
 	// ALGORITMO DE ORDENAMIENTO RADIX SORT
 	uint32_t *AuxMapPos;
@@ -203,12 +220,6 @@ int main(int argc, char *argv[] ) {
 
 	// 3.1 Calcular el arreglo de prefijos exclusivos
 	prefix_sum(lendesc,prefixLendesc,TotalReads, NThreads);
-
-	// 3.2 Cálculos previos
-	uint32_t chuncksize	=	TotalReads / NThreads;
-	if ( chuncksize % 2 != 0 ) {	// Si es impar
-		chuncksize = chuncksize + 1;
-	}
 
 	#pragma omp parallel num_threads(NThreads) shared(chuncksize)
 	{
