@@ -285,8 +285,7 @@ int main(int argc, char *argv[] ) {
 	if(BaseRef)		free(BaseRef);
 	if(BinInst) 	free(BinInst);
 	if(Preambulos) 	free(Preambulos);
-	if(Indexes) 	free(Indexes);
-    
+	//if(Indexes) 	free(Indexes);
     return 0;
 
 }
