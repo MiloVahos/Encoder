@@ -169,10 +169,17 @@
 ### 18 de Febrero
   ### Objetivo: Probar la versión estática y comparar con la versión secuencial
   ### Estrategia:
-  - [] Organizar el código de la versión estática.
-  - [] Organizar el código de la versión secuencial
-  - [] Descargar los codigos en el servidor
-  - [] Generar archivos de prueba
+  - [x] Organizar el código de la versión estática.
+  - [x] Organizar el código de la versión secuencial
+  - [x] Descargar los codigos en el servidor
+  - [x] Generar archivos de prueba
   - [] Hacer pruebas de funcionalidad
   
-### Puntos clave:
+### 20 de Febrero
+  ### Objetivo: Comenzar con el desarrollo de la versión dinámica
+  **Descripción:** Al programa se pasa como parámetro el tamaños del chunck, los hilos toman porciones del tamaño definido, y al terminar, pasan a tomar otra porción deacuerdo con la última tomada por otro hilo.
+  **Consideraciones:**
+  * Condiciones de carrera
+  * Balanceo de carga
+  * Superposición de hilos
+  * Última porción

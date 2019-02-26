@@ -54,10 +54,12 @@ int main(int argc, char *argv[] ) {
 
 	// ARGUMENTOS DE ENTRADA
 	int 		NThreads = 4;	// NÚMERO DE HILOS POR DEFECTO 4
+	uint32_t 	ChunckSize = 1000; // TAMAÑO DEL CHUCK, DEF 1000
 
 	// VARIABLES DE PROCESO
 	uint32_t	TotalReads;		// CANTIDAD TOTAL DE READS = B*C
 	uint64_t	NTErrors;		// CANTIDAD TOTAL DE ERRORES
+	uint32_t	NumChuncks;		// CANTIDAD DE CHUNCKS
 	uint32_t	B;				// CANTIDAD BASE DE READS
 	uint8_t		C;				// COVERAGE DE LA CANTIDAD DE READS
 	FILE 		*ALIGN;			// PUNTEROS A LOS ARCHIVOS
@@ -85,6 +87,9 @@ int main(int argc, char *argv[] ) {
 		for ( int i = 1; i < argc; i++ ) {
 			if ( strcmp(argv[i], "-N" ) == 0 ) {
 				NThreads	=	(int) atoi (argv[i+1]);
+			}
+			if ( strcmp(argv[i], "-C" ) == 0 ) {
+				ChunckSize	=	(uint32_t) atoi (argv[i+1]);
 			}
 		}
 	}
@@ -170,11 +175,26 @@ int main(int argc, char *argv[] ) {
 	double elapsedTime;
 	gettimeofday(&t1,NULL);
 
+	// 3.2 Cálculos previos
+	uint32_t staticChunck	=	TotalReads / NThreads;
+	if ( staticChunck % 2 != 0 ) {	// Si es impar
+		staticChunck = staticChunck + 1;
+	}
 
 	// 2. USANDO EL RADIX SORT SE ORDENA EL VECTOR DE ÍNDICES DE ACUERDO CON LA POSICIÓN DE MAPEO
 	Indexes	=   (uint64_t*)  malloc(TotalReads*sizeof(uint64_t));
 	if ( Indexes == NULL ) printf ("Not enough memory for Indexes");
-	for ( int i = 0; i < TotalReads; i++ ) Indexes[i] =	i;
+	// Paralelizar esta operación
+	#pragma omp parallel num_threads(NThreads) shared(staticChunck)
+	{
+		uint8_t id;
+		uint32_t istart, iend;
+		id 		= 	omp_get_thread_num();		// ID DEL HILO
+		istart	=	id*staticChunck;				// I INICIAL PARA CADA HILOS
+		iend	=	(id+1)*staticChunck;			// I FINAL PARA HILO
+		if ( id == NThreads - 1 ) iend = TotalReads;
+		for ( int i = istart; i < iend; i++ ) Indexes[i] =	i;
+	}
 
 	// ALGORITMO DE ORDENAMIENTO RADIX SORT
 	uint32_t *AuxMapPos;
@@ -204,26 +224,27 @@ int main(int argc, char *argv[] ) {
 	// 3.1 Calcular el arreglo de prefijos exclusivos
 	prefix_sum(lendesc,prefixLendesc,TotalReads, NThreads);
 
-	// 3.2 Cálculos previos
-	uint32_t chuncksize	=	TotalReads / NThreads;
-	if ( chuncksize % 2 != 0 ) {	// Si es impar
-		chuncksize = chuncksize + 1;
-	}
+	// 3.2 Calculos previos
+	NumChuncks	=	TotalReads/ChunckSize;
 
-	#pragma omp parallel num_threads(NThreads) shared(chuncksize)
+	#pragma omp parallel num_threads(NThreads) shared(ChunckSize, NumChuncks)
 	{
-		/**
-		 * En esta implementación, se ha calculado el vector de prefijo inclusivo o exclusivo del vector
-		 * lendesc, a partir de este vector cada hilo puede saber cuantos errores ocurrieron antes 
-		 * de la porción de reads que el maneja, siendo así, tiene la información desde donde debe llenar
-		 * el vector BinInst
-		*/
+
+
+		for ( int i = 0; i < NumChuncks; i++ ) {
+			
+		}
+
+		// 1. ASIGNACIÓN DE CHUNCK
+		#pragma omp critical
+		{
+
+		}
+
 		uint8_t id;
 		uint32_t istart, iend;
 	
-		id 		= 	omp_get_thread_num();		// ID DEL HILO
-		istart	=	id*chuncksize;				// I INICIAL PARA CADA HILOS
-		iend	=	(id+1)*chuncksize;			// I FINAL PARA HILO
+		
 
 		uint32_t posBInst;
 
