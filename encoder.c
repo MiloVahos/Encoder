@@ -204,7 +204,7 @@ int main() {
 					BaseRead[AuxInd],BaseRef[AuxInd],AuxInd, &flagPream, PREAMBULOS, ELOGS, BININST );
 		
 	}
-	PREAMBULOS = fopen( "Preambulos.txt" , "w" ); 	
+	/*PREAMBULOS = fopen( "Preambulos.txt" , "w" ); 	
 	for ( int i = 0; i < TamPreabulo; i++ ) {
 		fprintf(PREAMBULOS,"%"PRIu8"\n", Preambulos[i]);
 	}
@@ -213,7 +213,7 @@ int main() {
 	for ( int i = 0; i < TamBinInst; i++ ) {
 		fprintf(BININST,"%"PRIu8"\n", BinInst[i]);
 	}
-	fclose(BININST);
+	fclose(BININST);*/
 
 	// SE CALCULA EL TIEMPO TOTAL DE EJECUCIÓN Y SE MUESTRA
 	gettimeofday(&t2,NULL);
