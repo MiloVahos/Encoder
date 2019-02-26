@@ -148,6 +148,8 @@ int main() {
 			}
 		}		
 		fscanf( ALIGN, "%"SCNu64"", &NTErrors );
+		printf("Número de Errores: %"PRIu64"\n",NTErrors);
+		
 	}
 	fclose (ALIGN);
 
@@ -202,6 +204,14 @@ int main() {
 					lendesc[AuxInd],Offset[AuxInd],Oper[AuxInd],
 					BaseRead[AuxInd],BaseRef[AuxInd],AuxInd, &flagPream, PREAMBULOS, ELOGS, BININST );
 		
+	}
+
+	for ( int i = 0; i < TamPreabulo; i++ ) {
+		fprintf(PREAMBULOS,"%"PRIu8"\n", Preambulos[i]);
+	}
+
+	for ( int i = 0; i < TamBinInst; i++ ) {
+		fprintf(BININST,"%"PRIu8"\n", BinInst[i]);
 	}
 
 	// SE CALCULA EL TIEMPO TOTAL DE EJECUCIÓN Y SE MUESTRA
