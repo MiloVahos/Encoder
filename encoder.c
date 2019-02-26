@@ -204,7 +204,15 @@ int main() {
 					BaseRead[AuxInd],BaseRef[AuxInd],AuxInd, &flagPream, PREAMBULOS, ELOGS, BININST );
 		
 	}
-	/*PREAMBULOS = fopen( "Preambulos.txt" , "w" ); 	
+
+	// SE CALCULA EL TIEMPO TOTAL DE EJECUCIÓN Y SE MUESTRA
+	gettimeofday(&t2,NULL);
+	elapsedTime = (double) (t2.tv_usec - t1.tv_usec) / 1000000 + (double) (t2.tv_sec - t1.tv_sec);
+	printf("Processing time: %lf seg\n",elapsedTime);
+	printf("Número de Reads: %"PRIu32"\n",TotalReads);
+	printf("Número de Errores: %"PRIu64"\n",NTErrors);
+
+	PREAMBULOS = fopen( "Preambulos.txt" , "w" ); 	
 	for ( int i = 0; i < TamPreabulo; i++ ) {
 		fprintf(PREAMBULOS,"%"PRIu8"\n", Preambulos[i]);
 	}
@@ -213,14 +221,7 @@ int main() {
 	for ( int i = 0; i < TamBinInst; i++ ) {
 		fprintf(BININST,"%"PRIu8"\n", BinInst[i]);
 	}
-	fclose(BININST);*/
-
-	// SE CALCULA EL TIEMPO TOTAL DE EJECUCIÓN Y SE MUESTRA
-	gettimeofday(&t2,NULL);
-	elapsedTime = (double) (t2.tv_usec - t1.tv_usec) / 1000000 + (double) (t2.tv_sec - t1.tv_sec);
-	printf("Processing time: %lf seg\n",elapsedTime);
-	printf("Número de Reads: %"PRIu32"\n",TotalReads);
-	printf("Número de Errores: %"PRIu64"\n",NTErrors);
+	fclose(BININST);
 
 	#if TEST_PRE 
 		fclose(PREAMBULOS);
