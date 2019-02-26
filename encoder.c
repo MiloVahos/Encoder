@@ -33,7 +33,7 @@
 //*******************Coding (Compression)(Inst --> binary coding)************************************//
 void Inst2Bin(  uint8_t *BinInst, uint8_t *Preambulos, uint32_t *posBInst, uint32_t *posPream,
 				char strand, uint8_t MoreFrags, uint16_t lendesc, uint16_t *Offsets, 
-				uint8_t *Oper, uint8_t *BaseRead, uint8_t *BaseRef, uint64_t i, uint8_t *flagPream,
+				uint8_t *Oper, uint8_t *BaseRead, uint8_t *BaseRef, uint32_t AuxInd, uint8_t *flagPream,
 				FILE *PREAMBULOS, FILE *ELOGS, FILE *BININST );
 uint8_t TrdBitInst( int counter, uint8_t  rest, uint8_t  *Oper, uint8_t  *BaseRead, 
                     uint8_t BaseRef, uint16_t *offset, uint16_t lendesc , char strand, 
@@ -46,7 +46,7 @@ uint8_t BitsBase(uint8_t BRead, uint8_t BRef, FILE *ELOGS);
 void EscalarBases(uint8_t *Base);
 
 //**********************************************SORTING**********************************************//
-void RadixSort(uint32_t TotalReads, uint32_t *MapPos, uint64_t *Indexes);
+void RadixSort(uint32_t TotalReads, uint32_t *MapPos, uint32_t *Indexes);
 
 int main() {
 
@@ -61,7 +61,7 @@ int main() {
 	FILE		*BININST;		// PUNTERO AL ARCHIVO DE PRUEBA DE BININST
 
 	// VARIABLES DE OPERACIÓN
-	uint64_t	*Indexes;		// Índices referentes a los Reads
+	uint32_t	*Indexes;		// Índices referentes a los Reads
 	uint32_t	posBInst;		// Índice que controla BinInst
 	uint32_t	posPream;		// Índice de control del arreglo de preámbulos
 	uint8_t		flagPream;		// Bandera que indica cuando se aumenta posPream
@@ -159,7 +159,7 @@ int main() {
 	gettimeofday(&t1,NULL);
 
 	// 2. USANDO EL RADIX SORT SE ORDENA EL VECTOR DE ÍNDICES DE ACUERDO CON LA POSICIÓN DE MAPEO
-	Indexes	=   (uint64_t*)  malloc(TotalReads*sizeof(uint64_t));
+	Indexes	=   (uint32_t*)  malloc(TotalReads*sizeof(uint32_t));
 	if ( Indexes == NULL ) printf ("Not enough memory for Indexes");
 	for ( int i = 0; i < TotalReads; i++ ) Indexes[i] =	i;
 
@@ -168,7 +168,7 @@ int main() {
 	AuxMapPos	=	(uint32_t*) malloc( TotalReads*sizeof(uint32_t));
 	memcpy(AuxMapPos,MapPos,TotalReads*sizeof(uint32_t));
 	RadixSort(TotalReads,AuxMapPos,Indexes);
-	free(AuxMapPos);	
+	free(AuxMapPos);
 
 	// 3. APLICACIÓN DEL INS2BIN
 	uint64_t TamBinInst	= NTErrors*BYTES_PER_ERROR;
@@ -182,7 +182,7 @@ int main() {
 	posPream	=	0;
 	MoreFrags	=	0;
 	flagPream	=	0;
-	uint64_t AuxInd	=	0;
+	uint32_t AuxInd	=	0;
 
 	#if TEST_PRE  		
 		PREAMBULOS = fopen( "Preambulos.txt" , "w" ); 	
@@ -193,7 +193,6 @@ int main() {
 	#if TEST_BINST		
 		BININST = fopen( "BinInst.txt", "w" );			
 	#endif
-
 	for ( int index = 0; index < TotalReads; index++ ) {
 
 		AuxInd	=	Indexes[index];
@@ -205,14 +204,16 @@ int main() {
 					BaseRead[AuxInd],BaseRef[AuxInd],AuxInd, &flagPream, PREAMBULOS, ELOGS, BININST );
 		
 	}
-
+	PREAMBULOS = fopen( "Preambulos.txt" , "w" ); 	
 	for ( int i = 0; i < TamPreabulo; i++ ) {
 		fprintf(PREAMBULOS,"%"PRIu8"\n", Preambulos[i]);
 	}
-
+	fclose(PREAMBULOS);
+	BININST = fopen( "BinInst.txt", "w" );			
 	for ( int i = 0; i < TamBinInst; i++ ) {
 		fprintf(BININST,"%"PRIu8"\n", BinInst[i]);
 	}
+	fclose(BININST);
 
 	// SE CALCULA EL TIEMPO TOTAL DE EJECUCIÓN Y SE MUESTRA
 	gettimeofday(&t2,NULL);
@@ -266,7 +267,7 @@ int main() {
 */ 
 void Inst2Bin(  uint8_t *BinInst, uint8_t *Preambulos, uint32_t *posBInst, uint32_t *posPream, 
 				char strand, uint8_t MoreFrags, uint16_t lendesc, uint16_t *Offsets, 
-				uint8_t *Oper, uint8_t *BaseRead, uint8_t *BaseRef, uint64_t Index, uint8_t *flagPream,
+				uint8_t *Oper, uint8_t *BaseRead, uint8_t *BaseRef, uint32_t Index, uint8_t *flagPream,
 				FILE *PREAMBULOS, FILE *ELOGS, FILE *BININST){
 
 	uint32_t    auxPosInst =   *posBInst ;
@@ -574,7 +575,7 @@ uint8_t BitsBase(uint8_t BRead, uint8_t BRef, FILE *ELOGS){
  * @param:	MapPos		->	Vector que contiene las posiciones de mapeo de cada read
  * @param:	Indexes		->	Vector de índices que se van a ordenar de acuerdo a MapPos
 */				
-void RadixSort(uint32_t TotalReads, uint32_t *MapPos, uint64_t *Indexes) {
+void RadixSort(uint32_t TotalReads, uint32_t *MapPos, uint32_t *Indexes) {
 
 	// Buffer de ordenamiento temporal para MapPos
     uint64_t *buffer = (uint64_t *) malloc(TotalReads*sizeof(uint64_t));

@@ -174,5 +174,21 @@
   - [] Descargar los codigos en el servidor
   - [] Generar archivos de prueba
   - [] Hacer pruebas de funcionalidad
-  
-### Puntos clave:
+
+### 20 de Febrero
+  ### Objetivo: Comenzar con el desarrollo de la versión dinámica
+  **Descripción:** Al programa se pasa como parámetro el tamaños del chunck, los hilos toman porciones del tamaño definido, y al terminar, pasan a tomar otra porción deacuerdo con la última tomada por otro hilo.
+  **Consideraciones:**
+  * Condiciones de carrera
+  * Balanceo de carga
+  * Superposición de hilos
+  * Última porción
+
+### 25 de Febrero
+  ### Objetivo: Organizar la versión secuencial para que trabaje correctamente
+  ### Estrategia:
+  - [] Depurar el código en su versión secuencial para detectar el error, esto implica aprender a depurar en Visual Studio.
+  - [] Cambiar el RadixSort
+  - [] Generar archivos de prueba de 100M Y 200M de reads
+  - [] Verificar correctitud de los datos
+  - [] Hacer un profiling completo de la versión secuencial
