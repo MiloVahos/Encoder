@@ -189,6 +189,13 @@
   ### Estrategia:
   - [] Depurar el código en su versión secuencial para detectar el error, esto implica aprender a depurar en Visual Studio.
   - [] Cambiar el RadixSort
-  - [] Generar archivos de prueba de 100M Y 200M de reads
-  - [] Verificar correctitud de los datos
+  - [x] Generar archivos de prueba de 100M
+  - [x] Verificar correctitud de los datos
   - [] Hacer un profiling completo de la versión secuencial
+
+### 26 de Febrero
+  ### Puntos clave:
+  - Generé un archivo de prueba de 100M Reads
+  - Corrí la versión secuencial y funcionó sin problemas cuando detecté que el error se generaba por no abrir los archivos donde se guardan los resultados de la prueba de integridad
+  - Corrí la versión secuencial generando los archivos para las pruebas de integridad y funcionó correctamente.
+  - En mi máquina genero un archivo de prueba con 5M y corro la versión secuencial y funciona bien, generando los archivos de prueba de integridad
