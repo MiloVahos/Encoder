@@ -115,14 +115,13 @@ for ( int i = 0; i < TotalReads; i++ ) {
 		if( TEST_PRE == 2 ) fprintf(PREAMBULOS, "Lendesc: %"PRIu16" - prefix: %"PRIu32"\n",lendesc[i], prefixLendesc[i]);
 	}
 
-if ( TEST_PRE == 2 ) {
-		for ( int i = 0; i < TamPreabulo; i++ ) {
-			fprintf(PREAMBULOS,"%"PRIu8"\n", Preambulos[i]);
-		}
-	}
-
-	if ( TEST_BINST == 2 ) {
-		for ( int i = 0; i < TamBinInst; i++ ) {
-			fprintf(BININST,"%"PRIu8"\n", BinInst[i]);
-		}
-	}
+PREAMBULOS = fopen( "Preambulos.txt" , "w" ); 	
+for ( int i = 0; i < TamPreabulo; i++ ) {
+	fprintf(PREAMBULOS,"%"PRIu8"\n", Preambulos[i]);
+}
+fclose(PREAMBULOS);
+BININST = fopen( "BinInst.txt", "w" );			
+for ( int i = 0; i < TamBinInst; i++ ) {
+	fprintf(BININST,"%"PRIu8"\n", BinInst[i]);
+}
+fclose(BININST);

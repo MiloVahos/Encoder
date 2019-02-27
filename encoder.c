@@ -1,8 +1,8 @@
 /*
  ============================================================================
  Name        : 	Encoder.c
- Author      : 	Aníbal Guerra Soler
- Parallel    :  Juan Camilo Peña Vahos
+ Author 1    : 	Aníbal Guerra Soler
+ Author 2    :  Juan Camilo Peña Vahos
  Copyright   : 	All rights reserved to UdeaCompress
  Description :	Encoder algorithm of the UdeaCompress FASTQ compressor
  ============================================================================
@@ -18,7 +18,6 @@
 #include <sys/time.h>
 
 // DEFINE
-#define NAMES_SIZE 100				// LONGITUD DEL NOMBRE DE LOS ARCHIVOS
 #define BASE_BITS 8					// MACROS DEL RADIXSORT
 #define BASE (1 << BASE_BITS)
 #define MASK (BASE-1)
@@ -51,11 +50,11 @@ void RadixSort(uint32_t TotalReads, uint32_t *MapPos, uint32_t *Indexes);
 int main() {
 
 	// VARIABLES DE PROCESO
-	uint32_t	TotalReads;		// CANTIDAD TOTAL DE READS = B*C
-	uint64_t	NTErrors;		// CANTIDAD TOTAL DE ERRORES
+	uint32_t	TotalReads;		// CANTIDAD TOTAL DE READS = B*C ( 0 y 200M )
+	uint64_t	NTErrors;		// CANTIDAD TOTAL DE ERRORES ( 0 y 51.200.000.000 )
 	uint32_t	B;				// CANTIDAD BASE DE READS
 	uint8_t		C;				// COVERAGE DE LA CANTIDAD DE READS
-	FILE 		*ALIGN;			// PUNTEROS A LOS ARCHIVOS
+	FILE 		*ALIGN;			// PUNTERO AL ARCHIVO DE ENTRADA
 	FILE		*PREAMBULOS;	// PUNTERO AL ARCHIVO DE PRUEBA DE PREAMBULOS
 	FILE		*ELOGS;			// PUNTERO AL ARCHIVO DE LOGS DE ERRORES
 	FILE		*BININST;		// PUNTERO AL ARCHIVO DE PRUEBA DE BININST
@@ -149,7 +148,6 @@ int main() {
 		}		
 		fscanf( ALIGN, "%"SCNu64"", &NTErrors );
 		printf("Número de Errores: %"PRIu64"\n",NTErrors);
-		
 	}
 	fclose (ALIGN);
 
@@ -159,11 +157,13 @@ int main() {
 	gettimeofday(&t1,NULL);
 
 	// 2. USANDO EL RADIX SORT SE ORDENA EL VECTOR DE ÍNDICES DE ACUERDO CON LA POSICIÓN DE MAPEO
+
+	// 2.1 CREO UN VECTOR DE ÍNDICES QUE SE VAN A ORGANIZAR DE ACUERDO CON MAPPOS
 	Indexes	=   (uint32_t*)  malloc(TotalReads*sizeof(uint32_t));
 	if ( Indexes == NULL ) printf ("Not enough memory for Indexes");
 	for ( int i = 0; i < TotalReads; i++ ) Indexes[i] =	i;
 
-	// ALGORITMO DE ORDENAMIENTO RADIX SORT
+	// 2.2 APLICO ALGORITMO DE ORDENAMIENTO RADIX SORT
 	uint32_t *AuxMapPos;
 	AuxMapPos	=	(uint32_t*) malloc( TotalReads*sizeof(uint32_t));
 	memcpy(AuxMapPos,MapPos,TotalReads*sizeof(uint32_t));
@@ -172,7 +172,8 @@ int main() {
 
 	// 3. APLICACIÓN DEL INS2BIN
 	uint64_t TamBinInst	= NTErrors*BYTES_PER_ERROR;
-	uint32_t TamPreabulo = floor( TotalReads/2 )+1;
+	uint32_t TamPreabulo = floor( TotalReads/2 );
+	if( TotalReads%2 != 0 ) TamPreabulo = TamPreabulo+1;
 	BinInst	=   (uint8_t*)  malloc(TamBinInst*sizeof(uint8_t));
 	if ( BinInst == NULL ) printf ("Not enough memory for BinInst");
 	Preambulos	=	(uint8_t*) malloc (TamPreabulo*sizeof(uint8_t));
@@ -193,6 +194,7 @@ int main() {
 	#if TEST_BINST		
 		BININST = fopen( "BinInst.txt", "w" );			
 	#endif
+
 	for ( int index = 0; index < TotalReads; index++ ) {
 
 		AuxInd	=	Indexes[index];
@@ -211,17 +213,6 @@ int main() {
 	printf("Processing time: %lf seg\n",elapsedTime);
 	printf("Número de Reads: %"PRIu32"\n",TotalReads);
 	printf("Número de Errores: %"PRIu64"\n",NTErrors);
-
-	PREAMBULOS = fopen( "Preambulos.txt" , "w" ); 	
-	for ( int i = 0; i < TamPreabulo; i++ ) {
-		fprintf(PREAMBULOS,"%"PRIu8"\n", Preambulos[i]);
-	}
-	fclose(PREAMBULOS);
-	BININST = fopen( "BinInst.txt", "w" );			
-	for ( int i = 0; i < TamBinInst; i++ ) {
-		fprintf(BININST,"%"PRIu8"\n", BinInst[i]);
-	}
-	fclose(BININST);
 
 	#if TEST_PRE 
 		fclose(PREAMBULOS);
@@ -246,7 +237,6 @@ int main() {
 	if(Indexes) 	free(Indexes);
 
     return 0;
-
 }
 
 // FUNCTIONS
@@ -579,7 +569,7 @@ uint8_t BitsBase(uint8_t BRead, uint8_t BRef, FILE *ELOGS){
 void RadixSort(uint32_t TotalReads, uint32_t *MapPos, uint32_t *Indexes) {
 
 	// Buffer de ordenamiento temporal para MapPos
-    uint64_t *buffer = (uint64_t *) malloc(TotalReads*sizeof(uint64_t));
+    uint32_t *buffer = (uint32_t *) malloc(TotalReads*sizeof(uint32_t));
     if (buffer  == NULL) printf("No hay espacio suficiente para buffer\n");
 
 	// Buffer de ordenamiento temporal para los índices
@@ -590,7 +580,7 @@ void RadixSort(uint32_t TotalReads, uint32_t *MapPos, uint32_t *Indexes) {
     int32_t i;
     int shift, cur_t;
 
-    for( shift = 0;	shift < total_digits;	shift += BASE_BITS ) { 
+    for( shift = 0;	shift < total_digits; shift += BASE_BITS ) { 
 
         int64_t bucket[BASE] = {0};
         int64_t local_bucket[BASE] = {0};
@@ -630,6 +620,7 @@ void RadixSort(uint32_t TotalReads, uint32_t *MapPos, uint32_t *Indexes) {
 		}
     }
     if(buffer) free(buffer);
+	if(bufferAux) free(bufferAux);
 }
 
 /* EscalarBases: Cuando strand sea s S i, se cambian las bases así:
