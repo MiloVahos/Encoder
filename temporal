@@ -125,3 +125,44 @@ for ( int i = 0; i < TamBinInst; i++ ) {
 	fprintf(BININST,"%"PRIu8"\n", BinInst[i]);
 }
 fclose(BININST);
+
+
+// PRUEBAS
+
+// PRUEBA 1
+	// Verificar que todos los datos se están tomando
+	FILE *PRUEBA1;
+	PRUEBA1 = fopen("PRUEBA1.text","w");
+	for ( int i = 0; i < TotalReads; i++ ) {
+		fprintf(PRUEBA1, "%"PRIu32"\n%"PRIu16"\n%c\n", MapPos[i], lendesc[i], strand[i] );
+		for ( int j = 0; j < lendesc[i]; j++ ) {
+			fprintf(PRUEBA1, "%c\n%"PRIu16"\n%c\n%c\n",Oper[i][j],Offset[i][j],BaseRef[i][j],BaseRead[i][j]);
+		}
+	}
+// PASA
+
+// PRUEBA 2
+	// ORDENAMIENTO
+	// ORDENAMIENTO TIPO BURBUJA A MAP POS
+	uint32_t *AuxMPOS;
+	AuxMPOS	=	(uint32_t*) malloc( TotalReads*sizeof(uint32_t));
+	memcpy(AuxMPOS,MapPos,TotalReads*sizeof(uint32_t));
+	uint32_t aux;
+	for(int i=1; i<TotalReads; i++) {
+		for(int j=0; j<TotalReads-i; j++){
+			if(MapPos[j]>MapPos[j+1]){
+			    aux    = MapPos[j+1];
+				MapPos[j+1] = MapPos[j];
+				MapPos[j]   = aux;
+			}
+		}
+	}
+	FILE *PRUEBA2MAPPOS, *PRUEBA2IND;
+	PRUEBA2MAPPOS = fopen("PRUEBA2M.txt","w");
+	PRUEBA2IND = fopen("PRUEBA2I.txt","w");
+	for( int i = 0; i < TotalReads; i++ ) {
+		fprintf(PRUEBA2MAPPOS,"%"PRIu32"\n",MapPos[i]);
+		fprintf(PRUEBA2IND,"%"PRIu32"\n",AuxMPOS[Indexes[i]]);
+	} 
+
+// PASA
