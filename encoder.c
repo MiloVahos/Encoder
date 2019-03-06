@@ -295,7 +295,7 @@ void Inst2Bin(  uint8_t *BinInst, uint8_t *Preambulos, uint32_t *posBInst, uint3
 				auxPosInst++;
 				BinInst[auxPosInst] = Offset(Offsets[u], &rest);
 				#if TEST_BINST 
-					fprintf(BININST,"Offset R (BYTE 1) Index: %"PRIu64" AuxPosInst: %"PRIu32", BinInst[auxPosInst]: %"PRIu8", Offset: %"PRIu16", Rest: %"PRIu8"\n",Index,auxPosInst,BinInst[auxPosInst],Offsets[u],rest);
+					fprintf(BININST,"Offset R (BYTE 1) Index: %"PRIu32" AuxPosInst: %"PRIu32", BinInst[auxPosInst]: %"PRIu8", Offset: %"PRIu16", Rest: %"PRIu8"\n",Index,auxPosInst,BinInst[auxPosInst],Offsets[u],rest);
 				#endif
 				auxPosInst++;
 
@@ -305,7 +305,7 @@ void Inst2Bin(  uint8_t *BinInst, uint8_t *Preambulos, uint32_t *posBInst, uint3
 				}
 				BinInst[auxPosInst] = TrdBitInst(u, rest, Oper, BaseRead, BaseRef[u], Offsets, lendesc, strand, &aux_i, ELOGS);
 				#if TEST_BINST 
-					fprintf(BININST,"Offset R (BYTE 2) Index: %"PRIu64" AuxPosInst: %"PRIu32", BinInst[auxPosInst]: %"PRIu8", BaseRef: %"PRIu8" \n",Index,auxPosInst,BinInst[auxPosInst],BaseRef[u]);
+					fprintf(BININST,"Offset R (BYTE 2) Index: %"PRIu32" AuxPosInst: %"PRIu32", BinInst[auxPosInst]: %"PRIu8", BaseRef: %"PRIu8" \n",Index,auxPosInst,BinInst[auxPosInst],BaseRef[u]);
 				#endif				
 				u=aux_i;
 
@@ -316,7 +316,7 @@ void Inst2Bin(  uint8_t *BinInst, uint8_t *Preambulos, uint32_t *posBInst, uint3
 				auxPosInst++;
 				BinInst[auxPosInst]= Offset(Offsets[u+1], &rest);
 				#if TEST_BINST
-					fprintf(BININST,"Offset F (BYTE 1) Index: %"PRIu64" AuxPosInst: %"PRIu32", BinInst[auxPosInst]: %"PRIu8", Offset: %"PRIu16", Rest: %"PRIu8"\n",Index,auxPosInst,BinInst[auxPosInst],Offsets[u],rest);
+					fprintf(BININST,"Offset F (BYTE 1) Index: %"PRIu32" AuxPosInst: %"PRIu32", BinInst[auxPosInst]: %"PRIu8", Offset: %"PRIu16", Rest: %"PRIu8"\n",Index,auxPosInst,BinInst[auxPosInst],Offsets[u],rest);
 				#endif
 				auxPosInst++;
 
@@ -326,7 +326,7 @@ void Inst2Bin(  uint8_t *BinInst, uint8_t *Preambulos, uint32_t *posBInst, uint3
 				}
 				BinInst[auxPosInst]= TrdBitInst(u, rest, Oper, BaseRead, BaseRef[u], Offsets, lendesc, strand,&aux_i, ELOGS);
 				#if TEST_BINST
-					fprintf(BININST,"Offset R (BYTE 2) Index: %"PRIu64" AuxPosInst: %"PRIu32", BinInst[auxPosInst]: %"PRIu8", BaseRef: %"PRIu8" \n",Index,auxPosInst,BinInst[auxPosInst],BaseRef[u]);
+					fprintf(BININST,"Offset R (BYTE 2) Index: %"PRIu32" AuxPosInst: %"PRIu32", BinInst[auxPosInst]: %"PRIu8", BaseRef: %"PRIu8" \n",Index,auxPosInst,BinInst[auxPosInst],BaseRef[u]);
 				#endif
 				u=aux_i;			
 			}
