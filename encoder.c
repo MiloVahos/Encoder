@@ -34,7 +34,7 @@
 //*******************Coding (Compression)(Inst --> binary coding)************************************//
 void Inst2Bin(  uint8_t *BinInst, uint8_t *Preambulos, uint32_t *posBInst, uint32_t *posPream,
 				char strand, uint8_t MoreFrags, uint16_t lendesc, uint16_t *Offsets, 
-				uint8_t *Oper, uint8_t *BaseRead, uint8_t *BaseRef, uint64_t i, uint8_t *flagPream,
+				uint8_t *Oper, uint8_t *BaseRead, uint8_t *BaseRef, uint32_t i, uint8_t *flagPream,
 				FILE *PREAMBULOS, FILE *ELOGS, FILE *BININST );
 uint8_t TrdBitInst( int counter, uint8_t  rest, uint8_t  *Oper, uint8_t  *BaseRead, 
                     uint8_t BaseRef, uint16_t *offset, uint16_t lendesc , char strand, 
@@ -48,7 +48,7 @@ void EscalarBases(uint8_t *Base);
 void prefix_sum( uint16_t *lendesc, uint32_t *prefixLendesc , uint32_t TotalReads, int NThreads);
 
 //**********************************************SORTING**********************************************//
-void RadixSort(uint32_t TotalReads, uint32_t *MapPos, uint64_t *Indexes);
+void RadixSort(uint32_t TotalReads, uint32_t *MapPos, uint32_t *Indexes);
 
 int main(int argc, char *argv[] ) {
 
@@ -66,7 +66,7 @@ int main(int argc, char *argv[] ) {
 	FILE		*BININST;		// PUNTERO AL ARCHIVO DE PRUEBA DE BININST
 
 	// VARIABLES DE OPERACIÓN
-	uint64_t	*Indexes;		// Índices referentes a los Reads
+	uint32_t	*Indexes;		// Índices referentes a los Reads
 	uint32_t	*MapPos;        // Posición de Matching respecto a la referencia
 	uint16_t  	*lendesc;    	// Cantidad de errores total en el Read
 	uint32_t  	*prefixLendesc; // Sumatoria de prefijo exclusivo de lendesc
@@ -170,9 +170,8 @@ int main(int argc, char *argv[] ) {
 	double elapsedTime;
 	gettimeofday(&t1,NULL);
 
-
 	// 2. USANDO EL RADIX SORT SE ORDENA EL VECTOR DE ÍNDICES DE ACUERDO CON LA POSICIÓN DE MAPEO
-	Indexes	=   (uint64_t*)  malloc(TotalReads*sizeof(uint64_t));
+	Indexes	=   (uint32_t*)  malloc(TotalReads*sizeof(uint32_t));
 	if ( Indexes == NULL ) printf ("Not enough memory for Indexes");
 	for ( int i = 0; i < TotalReads; i++ ) Indexes[i] =	i;
 
@@ -243,7 +242,7 @@ int main(int argc, char *argv[] ) {
 
 			// Verificar si el siguiente read mapea en la misma posición
 			uint8_t	MoreFrags;
-			uint64_t AuxInd	=	Indexes[index];
+			uint32_t AuxInd	=	Indexes[index];
 
 			// TAREA 1
 			if ( (index < TotalReads-1) && (MapPos[AuxInd]	==	MapPos[AuxInd+1]) ) MoreFrags =	1;
@@ -309,7 +308,7 @@ int main(int argc, char *argv[] ) {
 */ 
 void Inst2Bin(  uint8_t *BinInst, uint8_t *Preambulos, uint32_t *posBInst, uint32_t *posPream, 
 				char strand, uint8_t MoreFrags, uint16_t lendesc, uint16_t *Offsets, 
-				uint8_t *Oper, uint8_t *BaseRead, uint8_t *BaseRef, uint64_t Index, uint8_t *flagPream,
+				uint8_t *Oper, uint8_t *BaseRead, uint8_t *BaseRef, uint32_t Index, uint8_t *flagPream,
 				FILE *PREAMBULOS, FILE *ELOGS, FILE *BININST){
 
 	uint32_t    auxPosInst =   *posBInst ;
@@ -346,7 +345,7 @@ void Inst2Bin(  uint8_t *BinInst, uint8_t *Preambulos, uint32_t *posBInst, uint3
 				auxPosInst++;
 				BinInst[auxPosInst] = Offset(Offsets[u], &rest);
 				#if TEST_BINST 
-					fprintf(BININST,"Offset R (BYTE 1) Index: %"PRIu64" AuxPosInst: %"PRIu32", BinInst[auxPosInst]: %"PRIu8", Offset: %"PRIu16", Rest: %"PRIu8"\n",Index,auxPosInst,BinInst[auxPosInst],Offsets[u],rest);
+					fprintf(BININST,"Offset R (BYTE 1) Index: %"PRIu32" AuxPosInst: %"PRIu32", BinInst[auxPosInst]: %"PRIu8", Offset: %"PRIu16", Rest: %"PRIu8"\n",Index,auxPosInst,BinInst[auxPosInst],Offsets[u],rest);
 				#endif
 				auxPosInst++;
 
@@ -356,7 +355,7 @@ void Inst2Bin(  uint8_t *BinInst, uint8_t *Preambulos, uint32_t *posBInst, uint3
 				}
 				BinInst[auxPosInst] = TrdBitInst(u, rest, Oper, BaseRead, BaseRef[u], Offsets, lendesc, strand, &aux_i, ELOGS);
 				#if TEST_BINST 
-					fprintf(BININST,"Offset R (BYTE 2) Index: %"PRIu64" AuxPosInst: %"PRIu32", BinInst[auxPosInst]: %"PRIu8", BaseRef: %"PRIu8" \n",Index,auxPosInst,BinInst[auxPosInst],BaseRef[u]);
+					fprintf(BININST,"Offset R (BYTE 2) Index: %"PRIu32" AuxPosInst: %"PRIu32", BinInst[auxPosInst]: %"PRIu8", BaseRef: %"PRIu8" \n",Index,auxPosInst,BinInst[auxPosInst],BaseRef[u]);
 				#endif
 				u=aux_i;
 
@@ -367,7 +366,7 @@ void Inst2Bin(  uint8_t *BinInst, uint8_t *Preambulos, uint32_t *posBInst, uint3
 				auxPosInst++;
 				BinInst[auxPosInst]= Offset(Offsets[u+1], &rest);
 				#if TEST_BINST
-					fprintf(BININST,"Offset F (BYTE 1) Index: %"PRIu64" AuxPosInst: %"PRIu32", BinInst[auxPosInst]: %"PRIu8", Offset: %"PRIu16", Rest: %"PRIu8"\n",Index,auxPosInst,BinInst[auxPosInst],Offsets[u],rest);
+					fprintf(BININST,"Offset F (BYTE 1) Index: %"PRIu32" AuxPosInst: %"PRIu32", BinInst[auxPosInst]: %"PRIu8", Offset: %"PRIu16", Rest: %"PRIu8"\n",Index,auxPosInst,BinInst[auxPosInst],Offsets[u],rest);
 				#endif
 				auxPosInst++;
 
@@ -377,7 +376,7 @@ void Inst2Bin(  uint8_t *BinInst, uint8_t *Preambulos, uint32_t *posBInst, uint3
 				}
 				BinInst[auxPosInst]= TrdBitInst(u, rest, Oper, BaseRead, BaseRef[u], Offsets, lendesc, strand,&aux_i, ELOGS);
 				#if TEST_BINST
-					fprintf(BININST,"Offset R (BYTE 2) Index: %"PRIu64" AuxPosInst: %"PRIu32", BinInst[auxPosInst]: %"PRIu8", BaseRef: %"PRIu8" \n",Index,auxPosInst,BinInst[auxPosInst],BaseRef[u]);
+					fprintf(BININST,"Offset R (BYTE 2) Index: %"PRIu32" AuxPosInst: %"PRIu32", BinInst[auxPosInst]: %"PRIu8", BaseRef: %"PRIu8" \n",Index,auxPosInst,BinInst[auxPosInst],BaseRef[u]);
 				#endif
 				u=aux_i;			
 			}
@@ -623,10 +622,10 @@ uint8_t BitsBase(uint8_t BRead, uint8_t BRef, FILE *ELOGS){
  * @param:	MapPos		->	Vector que contiene las posiciones de mapeo de cada read
  * @param:	Indexes		->	Vector de índices que se van a ordenar de acuerdo a MapPos
 */				
-void RadixSort(uint32_t TotalReads, uint32_t *MapPos, uint64_t *Indexes) {
+void RadixSort(uint32_t TotalReads, uint32_t *MapPos, uint32_t *Indexes) {
 
 	// Buffer de ordenamiento temporal para MapPos
-    uint64_t *buffer = (uint64_t *) malloc(TotalReads*sizeof(uint64_t));
+    uint32_t *buffer = (uint32_t *) malloc(TotalReads*sizeof(uint32_t));
     if (buffer  == NULL) printf("No hay espacio suficiente para buffer\n");
 
 	// Buffer de ordenamiento temporal para los índices
