@@ -126,3 +126,39 @@ if ( TEST_PRE == 2 ) {
 			fprintf(BININST,"%"PRIu8"\n", BinInst[i]);
 		}
 	}
+
+	uint32_t nthr, *z;
+	uint32_t *x = prefixLendesc;
+
+  	#pragma omp parallel num_threads(NThreads)
+  	{
+    	int i;
+    	#pragma omp single
+    	{
+      		nthr = omp_get_num_threads();
+      		z = malloc(sizeof(uint32_t)*nthr+1);
+      		z[0] = 0;
+    	}
+
+    	int tid = omp_get_thread_num();
+    	uint32_t sum = 0;
+
+    	#pragma omp for schedule(static) 
+    		for(i=0; i< TotalReads; i++) {
+      			sum += lendesc[i];
+      			x[i] = sum;
+    		}
+    	z[tid+1] = sum;
+    	#pragma omp barrier
+
+    	int offset = 0;
+    	for(i=0; i<(tid+1); i++) {
+        	offset += z[i];
+    	}
+
+    	#pragma omp for schedule(static)
+    	for(i=0; i< TotalReads; i++) {
+      		x[i] += offset;
+    	}
+  	}
+  	free(z);

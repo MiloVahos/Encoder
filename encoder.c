@@ -184,10 +184,11 @@ int main(int argc, char *argv[] ) {
 
 	// 3. APLICACIÓN DEL INS2BIN
 	uint64_t TamBinInst	= NTErrors*BYTES_PER_ERROR;
-	uint32_t TamPreabulo = floor( TotalReads/2 )+1;
+	uint32_t TamPreambulo = TotalReads/2;
+	if( TamPreambulo%2 != 0 ) TamPreambulo=TamPreambulo+1;
 	BinInst	=   (uint8_t*)  malloc(TamBinInst*sizeof(uint8_t));
 	if ( BinInst == NULL ) printf ("Not enough memory for BinInst");
-	Preambulos	=	(uint8_t*) malloc (TamPreabulo*sizeof(uint8_t));
+	Preambulos	=	(uint8_t*) malloc (TamPreambulo*sizeof(uint8_t));
 	if ( Preambulos == NULL ) printf ("Not enough memory for Preambulos");
 
 	#if TEST_PRE  		
@@ -201,7 +202,11 @@ int main(int argc, char *argv[] ) {
 	#endif
 
 	// 3.1 Calcular el arreglo de prefijos exclusivos
-	prefix_sum(lendesc,prefixLendesc,TotalReads, NThreads);
+	// prefix_sum(lendesc,prefixLendesc,TotalReads, NThreads);
+	prefixLendesc[0] = lendesc[Indexes[0]];
+	for ( int i = 1; i < TotalReads; i++ ) {
+		prefixLendesc[i] = prefixLendesc[i-1]+lendesc[Indexes[i]];
+	}
 
 	// 3.2 Cálculos previos
 	uint32_t chuncksize	=	TotalReads / NThreads;
@@ -209,7 +214,7 @@ int main(int argc, char *argv[] ) {
 		chuncksize = chuncksize + 1;
 	}
 
-	#pragma omp parallel num_threads(NThreads) shared(chuncksize)
+	#pragma omp parallel num_threads(NThreads) shared(chuncksize, BinInst, Preambulos)
 	{
 		/**
 		 * En esta implementación, se ha calculado el vector de prefijo inclusivo o exclusivo del vector
@@ -226,12 +231,11 @@ int main(int argc, char *argv[] ) {
 
 		uint32_t posBInst;
 
-		if ( istart != 0 ) posBInst	=	prefixLendesc[istart-1]*2;
-		else posBInst	=	0;
+		if ( istart != 0 ) posBInst	= ( prefixLendesc[istart-1]*BYTES_PER_ERROR );
+		else posBInst =	0;
 
 		if ( id == NThreads - 1 ) iend = TotalReads;
 		
-		printf("Hilo: %d, Start: %d, End: %d\n", id,istart,iend );
 
 		uint32_t posPream;
 		if ( id == 0 ) posPream = 0;
@@ -249,7 +253,6 @@ int main(int argc, char *argv[] ) {
 			else MoreFrags	=	0;
 			
 			//Aplicar el inst2bin
-			
 			Inst2Bin(	BinInst, Preambulos,&posBInst,&posPream, strand[AuxInd],MoreFrags,
 						lendesc[AuxInd],Offset[AuxInd],Oper[AuxInd],
 						BaseRead[AuxInd],BaseRef[AuxInd],AuxInd, &flagPream, PREAMBULOS, 
