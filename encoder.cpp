@@ -16,6 +16,8 @@
 #include <math.h>
 #include <inttypes.h>
 #include <sys/time.h>
+#include <iostream> 
+#include <chrono> 
 
 // DEFINE
 #define BASE_BITS 8					// MACROS DEL RADIXSORT
@@ -152,9 +154,8 @@ int main() {
 	fclose (ALIGN);
 
 	// ESTRUCTURA PARA MEDIR TIEMPO DE EJECUCIÓN
-	struct timeval t1,t2;
-	double elapsedTime;
-	gettimeofday(&t1,NULL);
+	std::chrono::time_point<std::chrono::system_clock> start, end; 
+	start = std::chrono::system_clock::now();
 
 	// 2. USANDO EL RADIX SORT SE ORDENA EL VECTOR DE ÍNDICES DE ACUERDO CON LA POSICIÓN DE MAPEO
 	Indexes	=   (uint32_t*)  malloc(TotalReads*sizeof(uint32_t));
@@ -206,8 +207,9 @@ int main() {
 	}
 
 	// SE CALCULA EL TIEMPO TOTAL DE EJECUCIÓN Y SE MUESTRA
-	gettimeofday(&t2,NULL);
-	elapsedTime = (double) (t2.tv_usec - t1.tv_usec) / 1000000 + (double) (t2.tv_sec - t1.tv_sec);
+	end = std::chrono::system_clock::now(); 
+	std::chrono::duration<double> elapsedTime = end - start;
+
 	printf("Processing time: %lf seg\n",elapsedTime);
 	printf("Número de Reads: %"PRIu32"\n",TotalReads);
 	printf("Número de Errores: %"PRIu64"\n",NTErrors);
