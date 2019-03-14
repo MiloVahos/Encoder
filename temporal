@@ -14,115 +14,110 @@ printf("posbInst = %"PRIu32"\n",posBInst);
 
 printf("%"PRIu64"",TamBinInst);
 
-	printf("%c ",strand);
-	printf("%"PRIu8" ",MoreFrags);
-	printf("%"PRIu16" ",lendesc);
+printf("%c ",strand);
+printf("%"PRIu8" ",MoreFrags);
+printf("%"PRIu16" ",lendesc);
 
-		printf("%"PRIu8" ",BinInst[auxPosInst]);
+printf("%"PRIu8" ",BinInst[auxPosInst]);
 
 
-			printf("%"PRIu8",%"PRIu8",%"PRIu8"   ",Oper[i],BaseRead[ii], BaseRef);
+printf("%"PRIu8",%"PRIu8",%"PRIu8"   ",Oper[i],BaseRead[ii], BaseRef);
 
 int x = getchar();
-
-
-#include <omp.h>
-#pragma omp parallel
-	{
-		omp_set_num_threads(1);
-		int id, index, Nthreads, istart, iend;
-		id = omp_get_thread_num();					// ID DEL HILO
-		Nthreads = omp_get_num_threads();			// NÚMERO DE HILOS CORRIENDO
-		istart	=	id*TotalReads/Nthreads;			// I INICIAL PARA CADA HILOS
-		iend	=	(id+1)*TotalReads/Nthreads;		// I FINAL PARA HILO
-        if ( id == Nthreads-1 ) iend = TotalReads;	// I FINAL PARA EL ÚLTIMO HILO
-
-		for ( int index = istart; index < iend; index++ ) {
-
-			// Verificar si el siguiente read mapea en la misma posición
-			AuxInd	=	Indexes[index];
-			if ( (index < TotalReads-1) && (MapPos[AuxInd]	==	MapPos[AuxInd+1]) ) MoreFrags	=	1;
-			else MoreFrags	=	0;
-			
-			//Aplicar el inst2bin
-			
-			Inst2Bin(	BinInst, Preambulos,&posBInst,&posPream, strand[AuxInd],MoreFrags,
-						lendesc[AuxInd],Offset[AuxInd],Oper[AuxInd],
-						BaseRead[AuxInd],BaseRef[AuxInd],AuxInd, &flagPream );
-			
-		}
- 
-}
-
-		printf("Pos pream thread %d es %"PRIu32"\n",id, posPream);
-
-
-
-
-
-
-
-// TIME CONTROL
-	elapsedTime	= (t2.tv_sec - t1.tv_sec) * 1000.0;
-	elapsedTime += (t2.tv_usec - t1.tv_usec) * 1000.0;
 
 // Imprimir total reads y NTErrors
 printf("TotalReads = %"PRIu32"\n",TotalReads);
 printf("NTErrors = %"PRIu64"\n",NTErrors);
 
 /*printf("%c ",Oper[i][j]);
-					printf("%"PRIu16" ",Offset[i][j]);
-					printf("%c ",BaseRead[i][j]);
-					printf("%c -",BaseRef[i][j]);*/
+printf("%"PRIu16" ",Offset[i][j]);
+printf("%c ",BaseRead[i][j]);
+printf("%c -",BaseRef[i][j]);*/
 
 
-			// printf("%d - %"PRIu32" - %"PRIu16" - %c \n",i,MapPos[i],lendesc[i],strand[i]);
+// printf("%d - %"PRIu32" - %"PRIu16" - %c \n",i,MapPos[i],lendesc[i],strand[i]);
 
-
-void prefix_sum( uint16_t *lendesc, uint32_t *prefixLendesc , uint32_t TotalReads) {
-
-	if ( TotalReads > 1) {
-		int i;
-		int j;
-		int l;
-		if ( TotalReads == 2 ) {
-			prefixLendesc[1] = lendesc[0] + lendesc[1];
-		} else {
-
-			#pragma omp parallel num_threads(TotalReads) private(i)
-			for( i = 2; i <= TotalReads; i *= 2 ) {
-				if ((omp_get_thread_num() % i) == (i - 1)) {
-					prefixLendesc[omp_get_thread_num()] = lendesc[omp_get_thread_num()] + lendesc[omp_get_thread_num() - i/2];
-				}
-				#pragma omp barrier
-			}
-
-			for( i=i/2; i > 1; i /= 2 ) {
-				if ((omp_get_thread_num() % i) == (i/2 - 1)) {
-					if (!(omp_get_thread_num() < (i/2 - 1))) {
-						prefixLendesc[omp_get_thread_num()] = lendesc[omp_get_thread_num()] + lendesc[omp_get_thread_num() - i/2];
-					}
-				}
-				#pragma omp barrier
-			}
-		}
-	}
-
-}
 
 // TEST INCLUSIVE PREFIX SUM
 for ( int i = 0; i < TotalReads; i++ ) {
-		if( TEST_PRE == 2 ) fprintf(PREAMBULOS, "Lendesc: %"PRIu16" - prefix: %"PRIu32"\n",lendesc[i], prefixLendesc[i]);
-	}
+	if( TEST_PRE == 2 ) fprintf(PREAMBULOS, "Lendesc: %"PRIu16" - prefix: %"PRIu32"\n",lendesc[i], prefixLendesc[i]);
+}
 
 if ( TEST_PRE == 2 ) {
-		for ( int i = 0; i < TamPreabulo; i++ ) {
-			fprintf(PREAMBULOS,"%"PRIu8"\n", Preambulos[i]);
-		}
+	for ( int i = 0; i < TamPreabulo; i++ ) {
+		fprintf(PREAMBULOS,"%"PRIu8"\n", Preambulos[i]);
 	}
+}
 
-	if ( TEST_BINST == 2 ) {
-		for ( int i = 0; i < TamBinInst; i++ ) {
-			fprintf(BININST,"%"PRIu8"\n", BinInst[i]);
-		}
+if ( TEST_BINST == 2 ) {
+	for ( int i = 0; i < TamBinInst; i++ ) {
+		fprintf(BININST,"%"PRIu8"\n", BinInst[i]);
 	}
+}
+
+PREAMBULOS = fopen( "Preambulos.txt" , "w" );
+for ( int i = 0; i < TamPreambulo; i++ ) fprintf(PREAMBULOS,"%"PRIu8"\n",Preambulos[i]);
+if(PREAMBULOS) fclose(PREAMBULOS);
+BININST = fopen( "BinInst.txt", "w" );
+for ( int i = 0; i < TamBinInst; i++ ) fprintf(BININST,"%"PRIu8"\n",BinInst[i]);
+if(BININST) fclose(BININST);
+
+
+// prefix_sum(lendesc,prefixLendesc,TotalReads, NThreads);
+
+void prefix_sum( uint16_t *lendesc, uint32_t *prefixLendesc , uint32_t TotalReads, int NThreads) {
+
+	uint32_t nthr, *z;
+	uint32_t *x = prefixLendesc;
+
+  	#pragma omp parallel num_threads(NThreads)
+  	{
+    	int i;
+    	#pragma omp single
+    	{
+      		nthr = omp_get_num_threads();
+      		z = malloc(sizeof(uint32_t)*nthr+1);
+      		z[0] = 0;
+    	}
+
+    	int tid = omp_get_thread_num();
+    	uint32_t sum = 0;
+
+    	#pragma omp for schedule(static) 
+    		for(i=0; i< TotalReads; i++) {
+      			sum += lendesc[i];
+      			x[i] = sum;
+    		}
+    	z[tid+1] = sum;
+    	#pragma omp barrier
+
+    	int offset = 0;
+    	for(i=0; i<(tid+1); i++) {
+        	offset += z[i];
+    	}
+
+    	#pragma omp for schedule(static)
+    	for(i=0; i< TotalReads; i++) {
+      		x[i] += offset;
+    	}
+  	}
+  	free(z);
+	
+}
+
+// C++
+
+#include <iostream> 
+#include <chrono> 
+
+// ESTRUCTURA PARA MEDIR TIEMPO DE EJECUCIÓN
+std::chrono::time_point<std::chrono::system_clock> start, end; 
+start = std::chrono::system_clock::now();
+
+// SE CALCULA EL TIEMPO TOTAL DE EJECUCIÓN Y SE MUESTRA
+end = std::chrono::system_clock::now(); 
+std::chrono::duration<double> elapsedTime = end - start;
+
+printf("Processing time: %lf seg\n",elapsedTime);
+printf("Número de Reads: %"PRIu32"\n",TotalReads);
+printf("Número de Errores: %"PRIu64"\n",NTErrors);

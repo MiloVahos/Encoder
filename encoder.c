@@ -34,7 +34,7 @@
 //*******************Coding (Compression)(Inst --> binary coding)************************************//
 void Inst2Bin(  uint8_t *BinInst, uint8_t *Preambulos, uint32_t *posBInst, uint32_t *posPream,
 				char strand, uint8_t MoreFrags, uint16_t lendesc, uint16_t *Offsets, 
-				uint8_t *Oper, uint8_t *BaseRead, uint8_t *BaseRef, uint64_t i, uint8_t *flagPream,
+				uint8_t *Oper, uint8_t *BaseRead, uint8_t *BaseRef, uint32_t i, uint8_t *flagPream,
 				FILE *PREAMBULOS, FILE *ELOGS, FILE *BININST );
 uint8_t TrdBitInst( int counter, uint8_t  rest, uint8_t  *Oper, uint8_t  *BaseRead, 
                     uint8_t BaseRef, uint16_t *offset, uint16_t lendesc , char strand, 
@@ -45,21 +45,18 @@ uint8_t Preambulo(uint8_t moreFrags, char strand, uint16_t lendesc, uint8_t flag
 uint8_t Offset(uint16_t offset, uint8_t *rest);
 uint8_t BitsBase(uint8_t BRead, uint8_t BRef, FILE *ELOGS);
 void EscalarBases(uint8_t *Base);
-void prefix_sum( uint16_t *lendesc, uint32_t *prefixLendesc , uint32_t TotalReads, int NThreads);
 
 //**********************************************SORTING**********************************************//
-void RadixSort(uint32_t TotalReads, uint32_t *MapPos, uint64_t *Indexes);
+void RadixSort(uint32_t TotalReads, uint32_t *MapPos, uint32_t *Indexes);
 
 int main(int argc, char *argv[] ) {
 
 	// ARGUMENTOS DE ENTRADA
 	int 		NThreads = 4;	// NÚMERO DE HILOS POR DEFECTO 4
-	uint32_t 	ChunckSize = 1000; // TAMAÑO DEL CHUCK, DEF 1000
 
 	// VARIABLES DE PROCESO
 	uint32_t	TotalReads;		// CANTIDAD TOTAL DE READS = B*C
 	uint64_t	NTErrors;		// CANTIDAD TOTAL DE ERRORES
-	uint32_t	NumChuncks;		// CANTIDAD DE CHUNCKS
 	uint32_t	B;				// CANTIDAD BASE DE READS
 	uint8_t		C;				// COVERAGE DE LA CANTIDAD DE READS
 	FILE 		*ALIGN;			// PUNTEROS A LOS ARCHIVOS
@@ -68,7 +65,7 @@ int main(int argc, char *argv[] ) {
 	FILE		*BININST;		// PUNTERO AL ARCHIVO DE PRUEBA DE BININST
 
 	// VARIABLES DE OPERACIÓN
-	uint64_t	*Indexes;		// Índices referentes a los Reads
+	uint32_t	*Indexes;		// Índices referentes a los Reads
 	uint32_t	*MapPos;        // Posición de Matching respecto a la referencia
 	uint16_t  	*lendesc;    	// Cantidad de errores total en el Read
 	uint32_t  	*prefixLendesc; // Sumatoria de prefijo exclusivo de lendesc
@@ -87,9 +84,6 @@ int main(int argc, char *argv[] ) {
 		for ( int i = 1; i < argc; i++ ) {
 			if ( strcmp(argv[i], "-N" ) == 0 ) {
 				NThreads	=	(int) atoi (argv[i+1]);
-			}
-			if ( strcmp(argv[i], "-C" ) == 0 ) {
-				ChunckSize	=	(uint32_t) atoi (argv[i+1]);
 			}
 		}
 	}
@@ -175,26 +169,10 @@ int main(int argc, char *argv[] ) {
 	double elapsedTime;
 	gettimeofday(&t1,NULL);
 
-	// 3.2 Cálculos previos
-	uint32_t staticChunck	=	TotalReads / NThreads;
-	if ( staticChunck % 2 != 0 ) {	// Si es impar
-		staticChunck = staticChunck + 1;
-	}
-
 	// 2. USANDO EL RADIX SORT SE ORDENA EL VECTOR DE ÍNDICES DE ACUERDO CON LA POSICIÓN DE MAPEO
-	Indexes	=   (uint64_t*)  malloc(TotalReads*sizeof(uint64_t));
+	Indexes	=   (uint32_t*)  malloc(TotalReads*sizeof(uint32_t));
 	if ( Indexes == NULL ) printf ("Not enough memory for Indexes");
-	// Paralelizar esta operación
-	#pragma omp parallel num_threads(NThreads) shared(staticChunck)
-	{
-		uint8_t id;
-		uint32_t istart, iend;
-		id 		= 	omp_get_thread_num();		// ID DEL HILO
-		istart	=	id*staticChunck;				// I INICIAL PARA CADA HILOS
-		iend	=	(id+1)*staticChunck;			// I FINAL PARA HILO
-		if ( id == NThreads - 1 ) iend = TotalReads;
-		for ( int i = istart; i < iend; i++ ) Indexes[i] =	i;
-	}
+	for ( int i = 0; i < TotalReads; i++ ) Indexes[i] =	i;
 
 	// ALGORITMO DE ORDENAMIENTO RADIX SORT
 	uint32_t *AuxMapPos;
@@ -205,10 +183,11 @@ int main(int argc, char *argv[] ) {
 
 	// 3. APLICACIÓN DEL INS2BIN
 	uint64_t TamBinInst	= NTErrors*BYTES_PER_ERROR;
-	uint32_t TamPreabulo = floor( TotalReads/2 )+1;
+	uint32_t TamPreambulo = TotalReads/2;
+	if( TamPreambulo%2 != 0 ) TamPreambulo=TamPreambulo+1;
 	BinInst	=   (uint8_t*)  malloc(TamBinInst*sizeof(uint8_t));
 	if ( BinInst == NULL ) printf ("Not enough memory for BinInst");
-	Preambulos	=	(uint8_t*) malloc (TamPreabulo*sizeof(uint8_t));
+	Preambulos	=	(uint8_t*) malloc (TamPreambulo*sizeof(uint8_t));
 	if ( Preambulos == NULL ) printf ("Not enough memory for Preambulos");
 
 	#if TEST_PRE  		
@@ -222,38 +201,40 @@ int main(int argc, char *argv[] ) {
 	#endif
 
 	// 3.1 Calcular el arreglo de prefijos exclusivos
-	prefix_sum(lendesc,prefixLendesc,TotalReads, NThreads);
+	prefixLendesc[0] = lendesc[Indexes[0]];
+	for ( int i = 1; i < TotalReads; i++ ) {
+		prefixLendesc[i] = prefixLendesc[i-1]+lendesc[Indexes[i]];
+	}
 
-	// 3.2 Calculos previos
-	NumChuncks	=	TotalReads/ChunckSize;
+	// 3.2 Cálculos previos
+	uint32_t chuncksize	=	TotalReads / NThreads;
+	if ( chuncksize % 2 != 0 ) {	// Si es impar
+		chuncksize = chuncksize + 1;
+	}
 
-	#pragma omp parallel num_threads(NThreads) shared(ChunckSize, NumChuncks)
+	#pragma omp parallel num_threads(NThreads) shared(chuncksize, BinInst, Preambulos)
 	{
-
-
-		for ( int i = 0; i < NumChuncks; i++ ) {
-			
-		}
-
-		// 1. ASIGNACIÓN DE CHUNCK
-		#pragma omp critical
-		{
-
-		}
-
+		/**
+		 * En esta implementación, se ha calculado el vector de prefijo inclusivo o exclusivo del vector
+		 * lendesc, a partir de este vector cada hilo puede saber cuantos errores ocurrieron antes 
+		 * de la porción de reads que el maneja, siendo así, tiene la información desde donde debe llenar
+		 * el vector BinInst
+		*/
 		uint8_t id;
 		uint32_t istart, iend;
 	
-		
+		id 		= 	omp_get_thread_num();		// ID DEL HILO
+		istart	=	id*chuncksize;				// I INICIAL PARA CADA HILOS
+		iend	=	(id+1)*chuncksize;			// I FINAL PARA HILO
 
 		uint32_t posBInst;
 
-		if ( istart != 0 ) posBInst	=	prefixLendesc[istart-1]*2;
-		else posBInst	=	0;
+		if ( istart != 0 ) posBInst	= ( prefixLendesc[istart-1]*BYTES_PER_ERROR );
+		else posBInst =	0;
 
 		if ( id == NThreads - 1 ) iend = TotalReads;
 		
-		printf("Hilo: %d, Start: %d, End: %d\n", id,istart,iend );
+		printf("Hilo: %d, Start: %d, End: %d, posBInst: %"PRIu32"\n", id,istart,iend, posBInst );
 
 		uint32_t posPream;
 		if ( id == 0 ) posPream = 0;
@@ -264,14 +245,13 @@ int main(int argc, char *argv[] ) {
 
 			// Verificar si el siguiente read mapea en la misma posición
 			uint8_t	MoreFrags;
-			uint64_t AuxInd	=	Indexes[index];
+			uint32_t AuxInd	=	Indexes[index];
 
 			// TAREA 1
 			if ( (index < TotalReads-1) && (MapPos[AuxInd]	==	MapPos[AuxInd+1]) ) MoreFrags =	1;
 			else MoreFrags	=	0;
 			
 			//Aplicar el inst2bin
-			
 			Inst2Bin(	BinInst, Preambulos,&posBInst,&posPream, strand[AuxInd],MoreFrags,
 						lendesc[AuxInd],Offset[AuxInd],Oper[AuxInd],
 						BaseRead[AuxInd],BaseRef[AuxInd],AuxInd, &flagPream, PREAMBULOS, 
@@ -307,7 +287,6 @@ int main(int argc, char *argv[] ) {
 	if(BinInst) 	free(BinInst);
 	if(Preambulos) 	free(Preambulos);
 	if(Indexes) 	free(Indexes);
-    
     return 0;
 
 }
@@ -331,7 +310,7 @@ int main(int argc, char *argv[] ) {
 */ 
 void Inst2Bin(  uint8_t *BinInst, uint8_t *Preambulos, uint32_t *posBInst, uint32_t *posPream, 
 				char strand, uint8_t MoreFrags, uint16_t lendesc, uint16_t *Offsets, 
-				uint8_t *Oper, uint8_t *BaseRead, uint8_t *BaseRef, uint64_t Index, uint8_t *flagPream,
+				uint8_t *Oper, uint8_t *BaseRead, uint8_t *BaseRef, uint32_t Index, uint8_t *flagPream,
 				FILE *PREAMBULOS, FILE *ELOGS, FILE *BININST){
 
 	uint32_t    auxPosInst =   *posBInst ;
@@ -368,7 +347,7 @@ void Inst2Bin(  uint8_t *BinInst, uint8_t *Preambulos, uint32_t *posBInst, uint3
 				auxPosInst++;
 				BinInst[auxPosInst] = Offset(Offsets[u], &rest);
 				#if TEST_BINST 
-					fprintf(BININST,"Offset R (BYTE 1) Index: %"PRIu64" AuxPosInst: %"PRIu32", BinInst[auxPosInst]: %"PRIu8", Offset: %"PRIu16", Rest: %"PRIu8"\n",Index,auxPosInst,BinInst[auxPosInst],Offsets[u],rest);
+					fprintf(BININST,"Offset R (BYTE 1) Index: %"PRIu32" AuxPosInst: %"PRIu32", BinInst[auxPosInst]: %"PRIu8", Offset: %"PRIu16", Rest: %"PRIu8"\n",Index,auxPosInst,BinInst[auxPosInst],Offsets[u],rest);
 				#endif
 				auxPosInst++;
 
@@ -378,7 +357,7 @@ void Inst2Bin(  uint8_t *BinInst, uint8_t *Preambulos, uint32_t *posBInst, uint3
 				}
 				BinInst[auxPosInst] = TrdBitInst(u, rest, Oper, BaseRead, BaseRef[u], Offsets, lendesc, strand, &aux_i, ELOGS);
 				#if TEST_BINST 
-					fprintf(BININST,"Offset R (BYTE 2) Index: %"PRIu64" AuxPosInst: %"PRIu32", BinInst[auxPosInst]: %"PRIu8", BaseRef: %"PRIu8" \n",Index,auxPosInst,BinInst[auxPosInst],BaseRef[u]);
+					fprintf(BININST,"Offset R (BYTE 2) Index: %"PRIu32" AuxPosInst: %"PRIu32", BinInst[auxPosInst]: %"PRIu8", BaseRef: %"PRIu8" \n",Index,auxPosInst,BinInst[auxPosInst],BaseRef[u]);
 				#endif
 				u=aux_i;
 
@@ -389,7 +368,7 @@ void Inst2Bin(  uint8_t *BinInst, uint8_t *Preambulos, uint32_t *posBInst, uint3
 				auxPosInst++;
 				BinInst[auxPosInst]= Offset(Offsets[u+1], &rest);
 				#if TEST_BINST
-					fprintf(BININST,"Offset F (BYTE 1) Index: %"PRIu64" AuxPosInst: %"PRIu32", BinInst[auxPosInst]: %"PRIu8", Offset: %"PRIu16", Rest: %"PRIu8"\n",Index,auxPosInst,BinInst[auxPosInst],Offsets[u],rest);
+					fprintf(BININST,"Offset F (BYTE 1) Index: %"PRIu32" AuxPosInst: %"PRIu32", BinInst[auxPosInst]: %"PRIu8", Offset: %"PRIu16", Rest: %"PRIu8"\n",Index,auxPosInst,BinInst[auxPosInst],Offsets[u],rest);
 				#endif
 				auxPosInst++;
 
@@ -399,7 +378,7 @@ void Inst2Bin(  uint8_t *BinInst, uint8_t *Preambulos, uint32_t *posBInst, uint3
 				}
 				BinInst[auxPosInst]= TrdBitInst(u, rest, Oper, BaseRead, BaseRef[u], Offsets, lendesc, strand,&aux_i, ELOGS);
 				#if TEST_BINST
-					fprintf(BININST,"Offset R (BYTE 2) Index: %"PRIu64" AuxPosInst: %"PRIu32", BinInst[auxPosInst]: %"PRIu8", BaseRef: %"PRIu8" \n",Index,auxPosInst,BinInst[auxPosInst],BaseRef[u]);
+					fprintf(BININST,"Offset R (BYTE 2) Index: %"PRIu32" AuxPosInst: %"PRIu32", BinInst[auxPosInst]: %"PRIu8", BaseRef: %"PRIu8" \n",Index,auxPosInst,BinInst[auxPosInst],BaseRef[u]);
 				#endif
 				u=aux_i;			
 			}
@@ -645,10 +624,10 @@ uint8_t BitsBase(uint8_t BRead, uint8_t BRef, FILE *ELOGS){
  * @param:	MapPos		->	Vector que contiene las posiciones de mapeo de cada read
  * @param:	Indexes		->	Vector de índices que se van a ordenar de acuerdo a MapPos
 */				
-void RadixSort(uint32_t TotalReads, uint32_t *MapPos, uint64_t *Indexes) {
+void RadixSort(uint32_t TotalReads, uint32_t *MapPos, uint32_t *Indexes) {
 
 	// Buffer de ordenamiento temporal para MapPos
-    uint64_t *buffer = (uint64_t *) malloc(TotalReads*sizeof(uint64_t));
+    uint32_t *buffer = (uint32_t *) malloc(TotalReads*sizeof(uint32_t));
     if (buffer  == NULL) printf("No hay espacio suficiente para buffer\n");
 
 	// Buffer de ordenamiento temporal para los índices
@@ -726,44 +705,4 @@ void EscalarBases(uint8_t *Base) {
 			*Base = 4;
 		break;
 	}
-}
-
-void prefix_sum( uint16_t *lendesc, uint32_t *prefixLendesc , uint32_t TotalReads, int NThreads) {
-
-	uint32_t nthr, *z;
-	uint32_t *x = prefixLendesc;
-
-  	#pragma omp parallel num_threads(NThreads)
-  	{
-    	int i;
-    	#pragma omp single
-    	{
-      		nthr = omp_get_num_threads();
-      		z = malloc(sizeof(uint32_t)*nthr+1);
-      		z[0] = 0;
-    	}
-
-    	int tid = omp_get_thread_num();
-    	uint32_t sum = 0;
-
-    	#pragma omp for schedule(static) 
-    		for(i=0; i< TotalReads; i++) {
-      			sum += lendesc[i];
-      			x[i] = sum;
-    		}
-    	z[tid+1] = sum;
-    	#pragma omp barrier
-
-    	int offset = 0;
-    	for(i=0; i<(tid+1); i++) {
-        	offset += z[i];
-    	}
-
-    	#pragma omp for schedule(static)
-    	for(i=0; i< TotalReads; i++) {
-      		x[i] += offset;
-    	}
-  	}
-  	free(z);
-	
 }
