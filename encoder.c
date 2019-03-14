@@ -53,6 +53,7 @@ int main(int argc, char *argv[] ) {
 
 	// ARGUMENTOS DE ENTRADA
 	int 		NThreads = 4;	// NÚMERO DE HILOS POR DEFECTO 4
+	uint32_t	chunckSize = 1000; // TAMAÑO DEL CHUNCK POR DEFECTO
 
 	// VARIABLES DE PROCESO
 	uint32_t	TotalReads;		// CANTIDAD TOTAL DE READS = B*C
@@ -84,6 +85,9 @@ int main(int argc, char *argv[] ) {
 		for ( int i = 1; i < argc; i++ ) {
 			if ( strcmp(argv[i], "-N" ) == 0 ) {
 				NThreads	=	(int) atoi (argv[i+1]);
+			}
+			if ( strcmp(argv[i], "-C" ) == 0 ) {
+				chunckSize	=	(uint32_t) atoi (argv[i+1]);
 			}
 		}
 	}
@@ -206,56 +210,49 @@ int main(int argc, char *argv[] ) {
 		prefixLendesc[i] = prefixLendesc[i-1]+lendesc[Indexes[i]];
 	}
 
-	// 3.2 Cálculos previos
-	uint32_t chuncksize	=	TotalReads / NThreads;
-	if ( chuncksize % 2 != 0 ) {	// Si es impar
-		chuncksize = chuncksize + 1;
-	}
+	// 3.2 Calcular la cantidad de porciones a disputar;
+	uint32_t totalChuncks = TotalReads/chunckSize;
 
-	#pragma omp parallel num_threads(NThreads) shared(chuncksize, BinInst, Preambulos)
+	#pragma omp parallel num_threads(NThreads) shared(BinInst, Preambulos, prefixLendesc)
 	{
-		/**
-		 * En esta implementación, se ha calculado el vector de prefijo inclusivo o exclusivo del vector
-		 * lendesc, a partir de este vector cada hilo puede saber cuantos errores ocurrieron antes 
-		 * de la porción de reads que el maneja, siendo así, tiene la información desde donde debe llenar
-		 * el vector BinInst
-		*/
-		uint8_t id;
-		uint32_t istart, iend;
-	
-		id 		= 	omp_get_thread_num();		// ID DEL HILO
-		istart	=	id*chuncksize;				// I INICIAL PARA CADA HILOS
-		iend	=	(id+1)*chuncksize;			// I FINAL PARA HILO
 
 		uint32_t posBInst;
-
-		if ( istart != 0 ) posBInst	= ( prefixLendesc[istart-1]*BYTES_PER_ERROR );
-		else posBInst =	0;
-
-		if ( id == NThreads - 1 ) iend = TotalReads;
-		
-		printf("Hilo: %d, Start: %d, End: %d, posBInst: %"PRIu32"\n", id,istart,iend, posBInst );
-
 		uint32_t posPream;
-		if ( id == 0 ) posPream = 0;
-		else posPream = ( (TotalReads/2) / NThreads ) * id;
-		
 		uint8_t flagPream	=	0;
-		for ( int index = istart; index < iend; index++ ) {
 
-			// Verificar si el siguiente read mapea en la misma posición
-			uint8_t	MoreFrags;
-			uint32_t AuxInd	=	Indexes[index];
+		for ( int tarea = 0; tarea < totalChuncks; tarea++ ) {
 
-			// TAREA 1
-			if ( (index < TotalReads-1) && (MapPos[AuxInd]	==	MapPos[AuxInd+1]) ) MoreFrags =	1;
-			else MoreFrags	=	0;
-			
-			//Aplicar el inst2bin
-			Inst2Bin(	BinInst, Preambulos,&posBInst,&posPream, strand[AuxInd],MoreFrags,
-						lendesc[AuxInd],Offset[AuxInd],Oper[AuxInd],
-						BaseRead[AuxInd],BaseRef[AuxInd],AuxInd, &flagPream, PREAMBULOS, 
-						ELOGS, BININST );
+			uint32_t readStart, readEnd;
+			readStart 	= 	tarea*chunckSize;
+			readEnd		=	(tarea+1)*chunckSize;
+			if( tarea == totalChuncks-1 ) readEnd = TotalReads;
+
+			if ( readStart != 0 ) posBInst	= ( prefixLendesc[readStart-1]*BYTES_PER_ERROR );
+			else posBInst =	0;
+
+			if ( tarea == 0 ) posPream = 0;
+			else posPream = ( (TotalReads/2) / totalChuncks ) * tarea;
+
+			#pragma omp task private( readStart, readEnd, posBInst, posPream, flagPream ) 
+			{
+				printf("Hilo: %d, Start: %d, End: %d, posBInst: %"PRIu32"\n", omp_get_thread_num(),readStart,readEnd, posBInst );
+				for ( int index = readStart; index < readEnd; index++ ) {
+
+					// Verificar si el siguiente read mapea en la misma posición
+					uint8_t	MoreFrags;
+					uint32_t AuxInd	=	Indexes[index];
+
+					// TAREA 1
+					if ( (index < TotalReads-1) && (MapPos[AuxInd]	==	MapPos[AuxInd+1]) ) MoreFrags =	1;
+					else MoreFrags	=	0;
+					
+					//Aplicar el inst2bin
+					Inst2Bin(	BinInst, Preambulos,&posBInst,&posPream, strand[AuxInd],MoreFrags,
+								lendesc[AuxInd],Offset[AuxInd],Oper[AuxInd],
+								BaseRead[AuxInd],BaseRef[AuxInd],AuxInd, &flagPream, PREAMBULOS, 
+								ELOGS, BININST );
+				}
+			}
 		}
 	}
 
