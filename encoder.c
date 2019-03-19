@@ -212,7 +212,7 @@ int main(int argc, char *argv[] ) {
 
 	// 3.2 Calcular la cantidad de porciones a disputar;
 	uint32_t totalChuncks = TotalReads/chunckSize;
-
+	printf("TotalChunks = %"PRIu32"\n",totalChuncks);
 	#pragma omp parallel num_threads(NThreads) shared(BinInst, Preambulos, prefixLendesc)
 	{
 
@@ -233,7 +233,7 @@ int main(int argc, char *argv[] ) {
 			if ( tarea == 0 ) posPream = 0;
 			else posPream = ( (TotalReads/2) / totalChuncks ) * tarea;
 
-			#pragma omp task private( readStart, readEnd, posBInst, posPream, flagPream ) 
+			#pragma omp task firstprivate( readStart, readEnd, posBInst, posPream, flagPream ) 
 			{
 				printf("Hilo: %d, Start: %d, End: %d, posBInst: %"PRIu32"\n", omp_get_thread_num(),readStart,readEnd, posBInst );
 				for ( int index = readStart; index < readEnd; index++ ) {
@@ -254,6 +254,7 @@ int main(int argc, char *argv[] ) {
 				}
 			}
 		}
+		#pragma omp barrier
 	}
 
 	// SE CALCULA EL TIEMPO TOTAL DE EJECUCIÓN Y SE MUESTRA
