@@ -121,3 +121,6 @@ std::chrono::duration<double> elapsedTime = end - start;
 printf("Processing time: %lf seg\n",elapsedTime);
 printf("Número de Reads: %"PRIu32"\n",TotalReads);
 printf("Número de Errores: %"PRIu64"\n",NTErrors);
+
+printf("tarea: %d, Hilo: %d, posPream: %"PRIu32", Start: %d, End: %d, posBInst: %"PRIu32"\n", tarea, omp_get_thread_num(), posPream,readStart,readEnd, posBInst );
+printf("tarea: %d, Hilo: %d, posPream: %"PRIu32"\n",tarea, omp_get_thread_num(), posPream);

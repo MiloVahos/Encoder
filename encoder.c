@@ -210,7 +210,10 @@ int main(int argc, char *argv[] ) {
 		prefixLendesc[i] = prefixLendesc[i-1]+lendesc[Indexes[i]];
 	}
 
-	// 3.2 Calcular la cantidad de porciones a disputar;
+	// 3.2 Verificar paridad
+	if ( chunckSize % 2 != 0 ) chunckSize = chunckSize + 1; 
+
+	// 3.3 Calcular la cantidad de porciones a disputar;
 	uint32_t totalChuncks = TotalReads/chunckSize;
 	printf("TotalChunks = %"PRIu32"\n",totalChuncks);
 	#pragma omp parallel num_threads(NThreads) shared(BinInst, Preambulos, prefixLendesc)
@@ -226,31 +229,32 @@ int main(int argc, char *argv[] ) {
 			readStart 	= 	tarea*chunckSize;
 			readEnd		=	(tarea+1)*chunckSize;
 			if( tarea == totalChuncks-1 ) readEnd = TotalReads;
-
 			if ( readStart != 0 ) posBInst	= ( prefixLendesc[readStart-1]*BYTES_PER_ERROR );
 			else posBInst =	0;
 
 			if ( tarea == 0 ) posPream = 0;
-			else posPream = ( (TotalReads/2) / totalChuncks ) * tarea;
-
-			#pragma omp task firstprivate( readStart, readEnd, posBInst, posPream, flagPream ) 
+			else posPream = ( chunckSize/2 ) * tarea;
+			
+			#pragma omp single nowait
 			{
-				printf("Hilo: %d, Start: %d, End: %d, posBInst: %"PRIu32"\n", omp_get_thread_num(),readStart,readEnd, posBInst );
-				for ( int index = readStart; index < readEnd; index++ ) {
+				printf("tarea: %d, Hilo: %d, posPream: %"PRIu32", Start: %d, End: %d, posBInst: %"PRIu32"\n", tarea, omp_get_thread_num(), posPream,readStart,readEnd, posBInst );
+				#pragma omp task firstprivate( readStart, readEnd, posBInst, posPream, flagPream ) 
+				{
+					for ( int index = readStart; index < readEnd; index++ ) {
 
-					// Verificar si el siguiente read mapea en la misma posición
-					uint8_t	MoreFrags;
-					uint32_t AuxInd	=	Indexes[index];
+						// Verificar si el siguiente read mapea en la misma posición
+						uint8_t	MoreFrags;
+						uint32_t AuxInd	=	Indexes[index];
 
-					// TAREA 1
-					if ( (index < TotalReads-1) && (MapPos[AuxInd]	==	MapPos[AuxInd+1]) ) MoreFrags =	1;
-					else MoreFrags	=	0;
-					
-					//Aplicar el inst2bin
-					Inst2Bin(	BinInst, Preambulos,&posBInst,&posPream, strand[AuxInd],MoreFrags,
-								lendesc[AuxInd],Offset[AuxInd],Oper[AuxInd],
-								BaseRead[AuxInd],BaseRef[AuxInd],AuxInd, &flagPream, PREAMBULOS, 
-								ELOGS, BININST );
+						// TAREA 1
+						if ( (index < TotalReads-1) && (MapPos[AuxInd]	==	MapPos[AuxInd+1]) ) MoreFrags =	1;
+						else MoreFrags	=	0;
+						//Aplicar el inst2bin
+						Inst2Bin(	BinInst, Preambulos,&posBInst,&posPream, strand[AuxInd],MoreFrags,
+									lendesc[AuxInd],Offset[AuxInd],Oper[AuxInd],
+									BaseRead[AuxInd],BaseRef[AuxInd],AuxInd, &flagPream, PREAMBULOS, 
+									ELOGS, BININST );
+					}
 				}
 			}
 		}
@@ -263,6 +267,13 @@ int main(int argc, char *argv[] ) {
 	printf("Processing time: %lf seg\n",elapsedTime);
 	printf("Número de Reads: %"PRIu32"\n",TotalReads);
 	printf("Número de Errores: %"PRIu64"\n",NTErrors);
+
+	PREAMBULOS = fopen( "PreambulosDin.txt" , "w" );
+	for ( int i = 0; i < TamPreambulo; i++ ) fprintf(PREAMBULOS,"%"PRIu8"\n",Preambulos[i]);
+	if(PREAMBULOS) fclose(PREAMBULOS);
+	BININST = fopen( "BinInstDin.txt", "w" );
+	for ( int i = 0; i < TamBinInst; i++ ) fprintf(BININST,"%"PRIu8"\n",BinInst[i]);
+	if(BININST) fclose(BININST);
 
 	#if TEST_PRE 
 		fclose(PREAMBULOS);
