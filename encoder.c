@@ -237,7 +237,7 @@ int main(int argc, char *argv[] ) {
 			
 			#pragma omp single nowait
 			{
-				printf("tarea: %d, Hilo: %d, posPream: %"PRIu32", Start: %d, End: %d, posBInst: %"PRIu32"\n", tarea, omp_get_thread_num(), posPream,readStart,readEnd, posBInst );
+				// printf("tarea: %d, Hilo: %d, posPream: %"PRIu32", Start: %d, End: %d, posBInst: %"PRIu32"\n", tarea, omp_get_thread_num(), posPream,readStart,readEnd, posBInst );
 				#pragma omp task firstprivate( readStart, readEnd, posBInst, posPream, flagPream ) 
 				{
 					for ( int index = readStart; index < readEnd; index++ ) {
