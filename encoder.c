@@ -268,13 +268,6 @@ int main(int argc, char *argv[] ) {
 	printf("Número de Reads: %"PRIu32"\n",TotalReads);
 	printf("Número de Errores: %"PRIu64"\n",NTErrors);
 
-	PREAMBULOS = fopen( "PreambulosDin.txt" , "w" );
-	for ( int i = 0; i < TamPreambulo; i++ ) fprintf(PREAMBULOS,"%"PRIu8"\n",Preambulos[i]);
-	if(PREAMBULOS) fclose(PREAMBULOS);
-	BININST = fopen( "BinInstDin.txt", "w" );
-	for ( int i = 0; i < TamBinInst; i++ ) fprintf(BININST,"%"PRIu8"\n",BinInst[i]);
-	if(BININST) fclose(BININST);
-
 	#if TEST_PRE 
 		fclose(PREAMBULOS);
 	#endif
