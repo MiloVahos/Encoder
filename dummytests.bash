@@ -1,6 +1,6 @@
 #!/bin/bash
 
-cp ./L1024_K26_B50000000/GRCh38.align ./
+cp ./L1024_K128_B100000000/GRCh38.align ./
 echo "ARCHIVO L1024_K26_B50000000/GRCh38.align COPIADO" >> "PruebaDummy.txt"
 echo "PRUEBAS SECUENCIAL" >> "PruebaDummy.txt"
 ./EncoderSec >> "PruebaDummy.txt"
