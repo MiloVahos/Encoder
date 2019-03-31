@@ -9,6 +9,7 @@ do
         echo "ARCHIVO L'$L'_K26_B$B/GRCh38.align COPIADO" >> "secuencialTest.txt"
         echo "PRUEBAS SECUENCIAL" >> "secuencialTest.txt"
         ./EncoderSec >> "secuencialTest.txt"
+        GRCh38.align
     done
 done
 
@@ -20,5 +21,6 @@ do
         echo "ARCHIVO L'$L'_K128_B$B/GRCh38.align COPIADO" >> "secuencialTest.txt"
         echo "PRUEBAS SECUENCIAL" >> "secuencialTest.txt"
         ./EncoderSec >> "secuencialTest.txt"
+        rm GRCh38.align
     done
 done
