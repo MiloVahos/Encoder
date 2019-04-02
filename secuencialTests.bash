@@ -10,6 +10,7 @@ do
         echo "PRUEBAS SECUENCIAL" >> "secuencialTest.txt"
         ./EncoderSec >> "secuencialTest.txt"
         rm GRCh38.align
+        echo "TERMINADO L'$L'_K26_B$B/"
     done
 done
 
@@ -22,5 +23,6 @@ do
         echo "PRUEBAS SECUENCIAL" >> "secuencialTest.txt"
         ./EncoderSec >> "secuencialTest.txt"
         rm GRCh38.align
+        echo "TERMINADO L'$L'_K26_B$B/"
     done
 done
