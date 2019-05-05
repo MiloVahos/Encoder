@@ -168,11 +168,6 @@ int main(int argc, char *argv[] ) {
 	}
 	fclose (ALIGN);
 
-	// ESTRUCTURA PARA MEDIR TIEMPO DE EJECUCIÓN
-	struct timeval t1,t2;
-	double elapsedTime;
-	gettimeofday(&t1,NULL);
-
 	// 2. USANDO EL RADIX SORT SE ORDENA EL VECTOR DE ÍNDICES DE ACUERDO CON LA POSICIÓN DE MAPEO
 	Indexes	=   (uint32_t*)  malloc(TotalReads*sizeof(uint32_t));
 	if ( Indexes == NULL ) printf ("Not enough memory for Indexes");
@@ -216,6 +211,12 @@ int main(int argc, char *argv[] ) {
 	// 3.3 Calcular la cantidad de porciones a disputar;
 	uint32_t totalChuncks = TotalReads/chunckSize;
 	printf("TotalChunks = %"PRIu32"\n",totalChuncks);
+
+	// ESTRUCTURA PARA MEDIR TIEMPO DE EJECUCIÓN
+	struct timeval t1,t2;
+	double elapsedTime;
+	gettimeofday(&t1,NULL);
+	
 	#pragma omp parallel num_threads(NThreads) shared(BinInst, Preambulos, prefixLendesc)
 	{
 
