@@ -164,11 +164,6 @@ int main(int argc, char *argv[] ) {
 	}
 	fclose (ALIGN);
 
-	// ESTRUCTURA PARA MEDIR TIEMPO DE EJECUCIÓN
-	struct timeval t1,t2;
-	double elapsedTime;
-	gettimeofday(&t1,NULL);
-
 	// 2. USANDO EL RADIX SORT SE ORDENA EL VECTOR DE ÍNDICES DE ACUERDO CON LA POSICIÓN DE MAPEO
 	Indexes	=   (uint32_t*)  malloc(TotalReads*sizeof(uint32_t));
 	if ( Indexes == NULL ) printf ("Not enough memory for Indexes");
@@ -211,6 +206,11 @@ int main(int argc, char *argv[] ) {
 	if ( chuncksize % 2 != 0 ) {	// Si es impar
 		chuncksize = chuncksize + 1;
 	}
+
+	// ESTRUCTURA PARA MEDIR TIEMPO DE EJECUCIÓN
+	struct timeval t1,t2;
+	double elapsedTime;
+	gettimeofday(&t1,NULL);
 
 	#pragma omp parallel num_threads(NThreads) shared(chuncksize, BinInst, Preambulos)
 	{
