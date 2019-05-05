@@ -151,11 +151,6 @@ int main() {
 	}
 	fclose (ALIGN);
 
-	// ESTRUCTURA PARA MEDIR TIEMPO DE EJECUCIÓN
-	struct timeval t1,t2;
-	double elapsedTime;
-	gettimeofday(&t1,NULL);
-
 	// 2. USANDO EL RADIX SORT SE ORDENA EL VECTOR DE ÍNDICES DE ACUERDO CON LA POSICIÓN DE MAPEO
 	Indexes	=   (uint32_t*)  malloc(TotalReads*sizeof(uint32_t));
 	if ( Indexes == NULL ) printf ("Not enough memory for Indexes");
@@ -192,6 +187,11 @@ int main() {
 	#if TEST_BINST		
 		BININST = fopen( "BinInst.txt", "w" );			
 	#endif
+
+	// ESTRUCTURA PARA MEDIR TIEMPO DE EJECUCIÓN
+	struct timeval t1,t2;
+	double elapsedTime;
+	gettimeofday(&t1,NULL);
 
 	for ( int index = 0; index < TotalReads; index++ ) {
 
