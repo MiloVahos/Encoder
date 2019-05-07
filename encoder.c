@@ -77,11 +77,6 @@ int main() {
 	uint8_t		*BinInst;		// Arreglo de salida del Inst2Bin
 	uint8_t		*Preambulos;	// Arreglo de salida con los preámbulos	
 
-	// ESTRUCTURA PARA MEDIR TIEMPO DE EJECUCIÓN
-	struct timeval t1,t2;
-	double elapsedTime;
-	gettimeofday(&t1,NULL);
-
 	// 1. LECTURA DE DATOS (NO SE TIENE EN CUENTA EN LA MEDIDA DE TIEMPO)
 	ALIGN	= 	fopen( "GRCh38.align" , "r" );
 	if( ALIGN != NULL ) {
@@ -156,6 +151,11 @@ int main() {
 	}
 	fclose (ALIGN);
 
+	// ESTRUCTURA PARA MEDIR TIEMPO DE EJECUCIÓN
+	struct timeval t1,t2;
+	double elapsedTime;
+	gettimeofday(&t1,NULL);
+
 	// 2. USANDO EL RADIX SORT SE ORDENA EL VECTOR DE ÍNDICES DE ACUERDO CON LA POSICIÓN DE MAPEO
 	Indexes	=   (uint32_t*)  malloc(TotalReads*sizeof(uint32_t));
 	if ( Indexes == NULL ) printf ("Not enough memory for Indexes");
@@ -205,6 +205,13 @@ int main() {
 		
 	}
 
+	// SE CALCULA EL TIEMPO TOTAL DE EJECUCIÓN Y SE MUESTRA
+	gettimeofday(&t2,NULL);
+	elapsedTime = (double) (t2.tv_usec - t1.tv_usec) / 1000000 + (double) (t2.tv_sec - t1.tv_sec);
+	printf("Processing time: %lf seg\n",elapsedTime);
+	printf("Número de Reads: %"PRIu32"\n",TotalReads);
+	printf("Número de Errores: %"PRIu64"\n",NTErrors);
+
 	#if TEST_PRE 
 		fclose(PREAMBULOS);
 	#endif
@@ -226,14 +233,6 @@ int main() {
 	if(BinInst) 	free(BinInst);
 	if(Preambulos) 	free(Preambulos);
 	if(Indexes) 	free(Indexes);
-
-	// SE CALCULA EL TIEMPO TOTAL DE EJECUCIÓN Y SE MUESTRA
-	gettimeofday(&t2,NULL);
-	elapsedTime = (double) (t2.tv_usec - t1.tv_usec) / 1000000 + (double) (t2.tv_sec - t1.tv_sec);
-	printf("Processing time: %lf seg\n",elapsedTime);
-	printf("Número de Reads: %"PRIu32"\n",TotalReads);
-	printf("Número de Errores: %"PRIu64"\n",NTErrors);
-
 
     return 0;
 }
